@@ -1,0 +1,944 @@
+CHT DRIFT JUDGE – 0.3.8 (1. fázis: solo / kvalifikáció)
+CornerHuntersTeam drift bírói rendszer Assetto Corsához
+=====================================================================
+
+TARTALOM
+  0. Új a 0.3.8-ban (a program a szerverről is jön – nem kell telepíteni; pályarajz ki-be egy
+     gombbal; bírói levonás; a pilóták futásai a bíróknál), a 0.3.7-ben (a válaszok szerinti pontozás: Line 60 / Angle 20 / Stílus 20, 72°, 13°, 95°,
+     minimális tempó, visszarakás = nullás; festésfelismerés javítása, IC pont, beírható értékek,
+     mappák, kipörgés, Edzés HUD), a 0.3.6-ban, a 0.3.5-ben és a 0.3.4-ben, javítás a 0.3.3-ban és
+     a 0.3.2-ben, új a 0.3.1-ben és a 0.3.0-ban
+  1. Telepítés
+  2. Pályaterv készítése
+  3. Futás és eredmény
+  4. TESZTELÉSI TERV – pontos lépések (T01–T54)
+  5. Mit küldjetek vissza
+  6. Alapbeállítások
+  7. Tesztjegyzőkönyv (kitöltendő minta)
+
+
+0. ÚJ A 0.3.8-BAN
+-----------------
+  • A PROGRAM A SZERVERRŐL IS JÖN (A08, E02): a PrikezsiaGang szerver minden belépőnek
+    automatikusan elküldi a programot, NEM KELL TELEPÍTENI. A szerver mindig a legfrissebb
+    verziót küldi (GitHub: github.com/martondavid04-design/cht-drift-judge). Megnyitás a
+    játékban:
+       Ctrl+Shift+D ... fő ablak (Élő, Eredmény, Futások, Pálya, Beállítások)
+       Ctrl+Shift+H ... HUD
+       Ctrl+Shift+Z ... pályarajz ki-be
+    (ha a CSP-d tudja: a chat app menüjében is van „CHT Drift Judge” bejegyzés). A fő ablak a
+    tetejénél fogva mozgatható, a jobb alsó sarkánál átméretezhető; a HUD akkor mozgatható,
+    amikor a fő ablak nyitva van. Belépéskor egy rövid üzenet mutatja a gyorsbillentyűket.
+    Mi más a szerverről kapott (online) változatban:
+      – NEM MENT FÁJLT (a CSP ezt nem engedi): a futások a játék bezárásáig maradnak meg, a
+        beállítások és a pályaterv viszont a következő belépésre is (a CSP saját tárolójában).
+      – A PÁLYATERV A SZERVERRŐL JÖN: a GitHub layouts\<pálya>\ mappájából. A Pálya fülön lehet
+        szerkeszteni, de a mentés csak a saját gépen marad meg „(helyi)” néven – a szerver
+        változatát senki nem írja felül véletlenül. A véglegeset a Pálya fül „Másolás” gombjával
+        kell elküldeni, és felkerül a szerverre (lásd T53).
+      – HANGOLÁSHOZ, telemetria-fájlokhoz a TELEPÍTETT változat kell (1. pont). Ha egy gépen a
+        telepített app is fut, a szerverről kapott változat csendben marad (nincs dupla HUD,
+        dupla rajz).
+  • SZERVERRŐL ÉRKEZETT FUTÁSOK: ha egy pilótánál véget ér egy futás, a program elküldi az
+    eredményét mindenkinek a szerveren. A bírók a Futások fülön látják („Szerverről érkezett
+    futások”): idő, pilóta, pont, Line / Angle / Stílus, hibák. A „Másolás táblázatként” gomb a
+    vágólapra teszi (beilleszthető táblázatba, Challonge-ba, Discordra). A pilóta gépe teljes
+    képkockaszámmal mér, ezért ez pontosabb, mint egy távoli autó pontozása. Csak
+    AssettoServerrel működik (a PrikezsiaGang ilyen).
+  • PÁLYARAJZ KI-BE (E01): a fő ablak felső sorában a „Pályarajz: BE / KI” gomb (vagy
+    Ctrl+Shift+Z) egyszerre elrejt / megmutat mindent, amit a program a pályára rajzol (zónák,
+    színek, kapuk, feliratok, nyomvonal). A pontozás közben ugyanúgy fut. KI állásban a HUD alján
+    „Pályarajz: KI” látszik. Hogy bekapcsolva mi látszódjon, továbbra is a Beállítások → „Mi
+    látszódjon a pályán” rész dönti el. A gyorsbillentyűk a Beállítások → „Pályarajz és
+    gyorsbillentyűk” részben átállíthatók.
+  • BÍRÓI LEVONÁS (A12, A16): Eredmény fül → Összegzés → „Bírói levonás”: a bíró esetenként beírja,
+    hány pontot von le (alapból 0), és egy megjegyzést. A futás mellé mentődik; a Futások listában
+    a pont a levonás után látszik, pl. „49,4 (−2,5)”. A program nem javasol számot – az Események
+    szekció mutatja a korrekciókat, túldobásokat, falérintéseket idővel.
+  • JAVÍTÁS A PONTOZÁSBAN: ha a futásban egyáltalán nem volt drift (5 m-nél kevesebb), a Stílus is
+    0 pont. Eddig egy egyenletes, lassú végiggurulás a „tempótartásért” 5 pontot kapott. Más
+    futáson ez nem változtat.
+  • A17 (tandem közelség): 3 m fölött „gyenge” lesz, érvénytelenítés nincs (a bírók döntenek), a
+    távolságot az egész futásra méri – ez a 2. fázis tandem részébe kerül.
+
+Ami még NINCS benne (2. fázis): tandem pontozás, közvetítői HUD a bírói adatokkal, kvalifikációs
+tábla, Top 32 ágrajz, eredménykártya és Discord-küldés. A pontokat a szerveren most mindenki
+látja (a szerver beállításában „pilotScores = 1”); ha a bírók Steam64 azonosítói megvannak, ez
+átállítható úgy, hogy csak a bírók és a közvetítő lássák.
+
+
+ÚJ A 0.3.7-BEN
+--------------
+A KÉRDÉSEKRE ADOTT VÁLASZOK ALAPJÁN (2026-11-14/15) – EZEK A PONTSZÁMOT IS ÉRINTIK:
+  • PONTFELOSZTÁS A DRIFT MASTERS 2025 SZERINT (C11): Line 60, Angle 20, Stílus 20 = 100.
+      – A zónák összesen 80 pontot érnek (a súlyuk arányában), ezen belül a zónapont 75% Line +
+        25% Angle – így jön ki a Line 60 és az Angle 20.
+      – A stílus 20 pontja: Indítás 5, Folyamatosság 10, Elkötelezettség 5. A program ezeket a
+        telemetriából méri:
+          Indítás: korai indítás (már a JUDGING vonalon driftel), gyors szögfelvétel (a célszög
+            80%-áig), szögvesztés nélkül (ha az első 1,5 mp-ben a szög esik, majd ugyanabba az
+            irányba újra fel kell építeni – pl. kettős indítás).
+          Folyamatosság: gyors irányváltás, lock to lock (nagy szög a váltás mindkét oldalán),
+            egyenletes szög (flow).
+          Elkötelezettség: gázadás (nincs gázelvétel driftben), tempótartás (nem ragad be),
+            és ha a pályatervben meg van adva, a minimális tempó.
+      – A korrekciót, a túldobást és a falérintést a bírók a feljegyzések alapján vonják le (A12),
+        ezért ezek a stílusba nem számítanak bele – a program jelzi őket, mint eddig.
+      – Az Eredmény fülön: Line x / 60, Angle x / 20, Stílus x / 20 sáv; a Stílus szekció a három
+        részt és azok mért értékeit mutatja.
+  • CÉLSZÖG 72° (C01), MINIMÁLIS SZÖG 13° (C02), BEFORGÁS 95° (D08) – az alapértékek ezek lettek.
+    Figyelem: a 2026-11-15 11:36-os Brno futás (63,7 pont) 95°-kal beforgás (24,4 mp-nél 100–101°),
+    a replay alapján nézzétek meg, valóban az volt-e.
+  • MINIMÁLIS TEMPÓ (C08): pályánként a pályatervben (Pálya fül → 5. Minimális tempó). A futás
+    átlagsebessége (JUDGING–FINISH, út szerint) a minimumon 0%, a „teljes pont tempón” 100% az
+    Elkötelezettségben; a minimum alatt a futás jelzést kap („Minimális tempó alatt”). A legegyszerűbb
+    beállítás: egy jó referencia-futás után Eredmény fül → Futás adatai → „Ez legyen a pálya
+    referencia-tempója” (az átlag lesz a teljes pont, a 90%-a a minimum), utána a pályaterv mentése.
+    A minimum alatt alapból nincs levonás (a bírók döntenek); ha kell, Beállítások → Stílus →
+    „Minimális tempó alatt: levonás”.
+  • VISSZARAKÁS A BÍRÁLAT ALATT = NULLÁS KÖR (C06): reset, boxba ugrás vagy teleport a JUDGING és
+    a FINISH között nullás kör, és elmentődik („Visszarakás a bírálat alatt”). A JUDGING előtt csak
+    megszakítás. Beállítások → Futás és mentés → kikapcsolható.
+  • KIPÖRGÉS (D05): eddig „mennyivel gyorsabban forog a kerék, mint ahogy halad” volt, ezért helyből
+    indulásnál 500%-ot is mutatott. Most: a kerék forgásának mekkora része pörgés – 0% = nem pörög,
+    50% = kétszer olyan gyorsan forog, mint ahogy halad, 100% = helyben pörög. A Részletes nézetben
+    km/h-ban is látszik a különbség.
+  • HUD – EDZÉS ELŐBEÁLLÍTÁS (D15): élő adatok (szög, sebesség, fokozat, kormány, pedálok, hajtás,
+    zóna, hibák) és új „Futás összesítő” modul: futás közben az eddigi zónapont, futás után a végső
+    pont Line / Angle / Stílus bontásban, a hibák, az idő és az átlagsebesség.
+  • A régi futások ugyanazt az eredményt adják a saját (mentett) beállításaikkal; az „Újrapontozás”
+    már az új felosztással számol. A feltöltött 75 db 0.3.5-ös futás az új alapokkal átlagosan
+    2,2 ponttal több (−2 … +8), a sorrend szinte ugyanaz (rangkorreláció 0,98).
+
+A 0.3.5-ÖS TESZTEK ÉS A KÉPERNYŐKÉPEK ALAPJÁN:
+  • ZÓNA A FESTÉSBŐL – a 0.3.5-ös debug fájl szerint a hiba oka: a felülnézeti kép a ti gépeteken
+    TELJESEN ÜRES volt (a CSP egyáltalán nem rajzolta ki a pályát a képre), ezért nem talált semmit.
+    Javítás:
+      – 5 különböző beállítással próbál felülnézeti képet készíteni (magasról / közelről, más
+        árnyalókkal, perspektívával); az első működőt megjegyzi pályánként.
+      – Ha egyik sem ad képet, vagy a képen nincs rajta a festés (pl. a festést a szerver / pálya
+        script rajzolja, nem a pálya modellje), a KÉPERNYŐT használja: amit te látsz. Ehhez a
+        kamerát (F7) felülről a festett zóna fölé kell állítani; az app ablakait figyelmen kívül
+        hagyja, a saját színes rajzait a kép idejére elrejti. Kép forrása választható:
+        Automatikus (ajánlott) / Felülnézeti kép / Képernyő (amit látsz).
+      – NYITOTT vagy hézagos keret: ha a keret egyik oldala hiányzik (pl. a fehér „]” alakú
+        keretnél a fal felőli oldal), vagy kopott, megszakadt, a program a festett vonalak végei
+        között lezárja (az előnézetben narancs vonal). A zóna vonala ilyenkor a hiányzó oldal.
+      – Árnyék, gumicsík, folt a kereten belül már nem zavar (a terület a festésig tart).
+      – Az ügyfél két képernyőképén ellenőrizve: a fehér „]” keret (2026-11-15) és a kopott sárga
+        keret (a 0.3.2 „elárasztás” hibája) mindkettő felismerhető, több kattintási ponttal is.
+      – A debug mappába minden próba képe bekerül (festes_proba_*.png, festes_kepernyo.png,
+        festes_utolso.json).
+  • IC – BELSŐ ÉRINTÉSI PONT: új zónatípus („+ IC”, a festésből is). Egy pont, ahová az első
+    lökhárítónak a legközelebb kell érnie. Pontozás: a lökhárító legkisebb távolsága a ponttól –
+    0,5 m alatt 100%, 2,5 m felett 0%, közte egyenletesen (zónánként állítható); a szög a pont
+    közelében számít. A pályán türkiz körök mutatják. Lerakás: kattintással, „Pont az autóhoz”
+    (belső első sarok), vagy a festésből (a festett jelre kattintva). Újra lerakva áthelyeződik,
+    a Méret és helyzet részben centiméterenként is mozgatható. Súlya automatikus (IC szorzó, alap 1,0).
+  • BEÍRHATÓ ÉRTÉKEK: a „Méret és helyzet” részben (és a Beállításokban) minden csúszka mellett
+    van egy mező – kattints bele, írd be a pontos értéket (tizedesvessző is jó), Enter. Ezen felül
+    beírható a zóna pontos hossza, a végek hosszabbítása / rövidítése és az eltolás is.
+  • ADATMAPPÁK: Beállítások → „Adatmappák”: egy gombbal megnyílik a fő mappa, az adott pálya
+    pályatervei és futásai, az összes futás, az összes pályaterv, a debug mappa és a beállítások
+    fájl. A Futások fülön is ott vannak a gombok.
+  • Ellenőrizve: a feltöltött futások (125 db, 5 pálya) a 0.3.7-tel, a mentéskori beállításokkal
+    újrapontozva ugyanazt az eredményt adják; az 5 pályaterv hibátlanul betölt.
+
+ÚJ A 0.3.6-BAN: MI LÁTSZÓDJON A PÁLYÁN
+--------------------------------------
+  • Eddig a zónák nevei mindig látszottak. Mostantól minden elemnél külön választható, mikor
+    látszódjon: Mindig / Csak a Pálya fülön (szerkesztéskor) / Soha.
+    Elemek: zónák és kapuk nevei, zónák vonalai és sávhatárai, színes kitöltés, piros
+    pályaelhagyás sáv, kapuk, az utolsó futás nyomvonala, lefedettség színezése.
+  • Szerepenként külön: Pilóta / Bíró / Közvetítő (Beállítások → „Mi látszódjon a pályán” →
+    „Szerepem ezen a gépen”). Alapból:
+      – Pilóta: a zónák NEVEI csak a Pálya fülön látszanak (szerkesztéskor), vezetés közben nem;
+        minden más (zónák, színek, piros sáv, kapuk, nyomvonal) látszik.
+      – Bíró: minden látszik.
+      – Közvetítő: csak a zónák vonalai és a színes kitöltés – feliratok, kapuk, piros sáv,
+        nyomvonal nélkül (tiszta közvetítési kép).
+    Mindegyik szerepnél bármelyik elem átállítható. A „Csak a Pálya fülön” azt jelenti: akkor
+    látszik, amikor a fő ablakban a Pálya fül nyitva van.
+  • A szerep most gépenként választható. A 2. fázisban a bíró és a közvetítő szerepet a Steam
+    ID-lista adja – az itt beállított láthatóság akkor is megmarad.
+  • A régi ki-be kapcsolók (zónák a pályán, feliratok, nyomvonal, lefedettség, kitöltés, piros sáv)
+    ebbe kerültek át; ami ki volt kapcsolva, az „Soha” lett.
+
+ÚJ A 0.3.5-BEN: ZÓNÁK SÚLYOZÁSA
+-------------------------------
+  • Pálya fül → 3. Zónák → „Súlyozás – melyik zóna mennyit ér”. Két mód:
+      – AUTOMATIKUS (új pályatervnél ez az alap): a program a zóna hossza, íve és típusa alapján
+        súlyoz – a hosszabb és jobban kanyarodó zóna többet ér, a rövid TNG szorzóval számol.
+        Képlet: súly = típusszorzó × hossz^0,5 × (1 + 0,25 × ív / 90°); a 4 m-nél rövidebb zóna
+        4 m-nek számít. Négyszer olyan hosszú zóna kétszer annyit ér; egy 90°-ban kanyarodó zóna
+        25%-kal többet, mint egy ugyanolyan hosszú egyenes. A pontozás is automatikusan ezt használja.
+        Zónánként a „Saját” pipával fix súly adható – a többi automatikus marad.
+      – KÉZI: minden zóna súlyát te adod meg (ahogy eddig). Átváltáskor a mostani automatikus
+        arányok maradnak meg kiindulásnak, így a pontok nem ugranak.
+    A táblázatban minden zónánál látszik a hossz, az ív, a súly és hogy hány pontot ér a 100-ból.
+    A képlet a Beállítások → „Zónák automatikus súlyozása” részben hangolható (a hossz és az ív
+    hatása, a legkisebb hossz, típusonkénti szorzó).
+  • A már meglévő pályatervek (pl. „Alap”) KÉZI módban maradnak, a pontjaik nem változnak – ha
+    automatikust szeretnétek, egy gombnyomás.
+  • Új figyelmeztetés: ha egy zóna vonala oda-vissza ugrál (cikcakkos, visszaforduló pontok – ez a
+    régi nyomkövetés hibája volt), a Teendők között szól. Ez a pontozást, a pályaelhagyást és a súlyt
+    is torzítja: rajzoljátok újra. (Az „Alap” tervben az OZ 1 és a FAL 4 ilyen.)
+
+ÚJ A 0.3.4-BEN
+--------------
+  • Pályaelhagyás zónánként, csúszkával (kijelölt zóna → „Méret és helyzet”):
+      – „A vonalon túl pályaelhagyás” – ennél a zónánál ki-be kapcsolható (alapból a Beállítások
+        szerint: OZ és IZ igen, TNG nem);
+      – „Pályaelhagyás kezdete a vonaltól” – hány méterrel a vonalon túl kezdődjön (0 = pont a
+        vonalon, negatív = már a vonal előtt). A piros sáv a pályán azonnal követi, és a pontozás is
+        ezt használja. Az „Alapra” gomb visszaállítja a Beállítások értékére (0,15 m).
+  • Kipörgés a HUD-on és az Élő fülön javítva: eddig a kerék sebességét csak a kerék irányába eső
+    haladáshoz mérte, ezért driftben (oldalazva) jóval nagyobbat mutatott a valóságosnál (pl. 35°-nál
+    20% helyett 46%-ot). Most a kerék tényleges talajsebességéhez méri, simítva. Az Élő fülön alatta
+    a két sebesség is látszik (hajtott kerekek km/h és a talajon km/h), így ellenőrizhető.
+  • Touch and go vonalak arányos állítása: ha az egyik vonalat (100 / 66 / 33 %) állítod, a másik kettő
+    ugyanolyan arányban változik (a zónánál és a Beállításokban is). A pipával kikapcsolható.
+
+JAVÍTÁS A 0.3.3-BAN
+-------------------
+  • „Zóna a festésből”: a 0.3.1–0.3.2 csak teli festett területet és egyetlen festett vonalat
+    ismert fel. A versenypályákon viszont a zóna egy festett KERET (sárga vonalak, belül aszfalt) –
+    ha a keret közepére kattintottatok, a program az aszfaltot követte, és „elárasztás” hibát adott.
+    Most a keret BELSEJÉBE kell kattintani: a program a belsejéből ismeri fel a keretet, a zóna
+    vonala a pálya szélén lévő festett vonal közepe lesz, a szélessége és a hossza a kereté.
+    A tesztelők képernyőképén kipróbálva: a keret mindkét oldalát és a teljes hosszát megtalálja.
+  • Ha a keret VONALÁRA kattintasz, érthető üzenetet kapsz („kattints a keret belsejébe”).
+  • Minden felismerés után elmentődik a felülnézeti kép és az adatok:
+    Dokumentumok\Assetto Corsa\CHT Drift Judge\debug\festes_utolso.png és festes_utolso.json.
+    Ha nem működik, ezt a két fájlt küldjétek el.
+  • Ha a felülnézeti kép üres lenne, a program egyszer más beállítással újrapróbálja, és ha úgy sem
+    megy, ezt külön kiírja.
+
+JAVÍTÁS A 0.3.2-BEN
+-------------------
+  • A 0.3.1 a pálya betöltése után összeomlasztotta a játékot (a zónák színes kitöltése túl sok
+    pontot küldött egyszerre a játék rajzolójának). Javítva: a kitöltés kis adagokban rajzolódik.
+    Ha a 0.3.1 fent van, ezt mindenképp tedd fel helyette.
+
+ÚJ A 0.3.1-BEN
+--------------
+  • Zóna automatikusan a festésből (kísérleti): Pálya fül → 3. Zónák → „Zóna a festésből”.
+    Festett keretnél a keret belsejébe kattints (0.3.3-tól), és a program lerakja: a zóna hossza és
+    szélessége a festésből jön. A zóna vonala a pálya szélén lévő (autótól távolabbi) oldal, vékony
+    festett vonalnál maga a vonal. Előnézet (lila vonal) után „Elfogadás” – vagy „Másik szél” /
+    „Középvonal”.
+  • Zóna mérete utólag is állítható (kijelölt zóna → „Méret és helyzet”): szélesség (meddig ér ki
+    a zóna), a teljes pontot érő sáv, a TNG vonalai, az eleje / vége rövidítése-hosszabbítása,
+    eltolás oldalra, pont mozgatása / beszúrása / törlése egérrel.
+  • Színes, átlátszó kitöltés a pályán: minden zónatípus saját színnel (OZ sárga, IZ kék, fal
+    narancs, TNG zöld), erősebben a teljes pontot érő sáv; a pályahatár vonalakon túl piros sáv
+    mutatja, hol számít már pályaelhagyásnak. A színek a Beállítások → „Zónák színei” részben
+    módosíthatók; hogy mikor látszik: Beállítások → „Mi látszódjon a pályán” (0.3.6-tól);
+    az erősség: Beállítások → Megjelenítés.
+    Alapból be van kapcsolva.
+  • Teendők: a panel elrejthető (Mindig látszik / Csak ha HIBA van / Elrejtve – a felső sorban
+    akkor is látszik a szám). Ami nálatok nem hiba (pl. egyenes vonal csak 2 ponttal), azt a
+    „Rendben, így jó” gombbal jóvá lehet hagyni: a pályatervbe mentődik, és amíg a zóna vonala
+    nem változik, nem szól érte. A „Jóváhagyva / elrejtve” listából visszaállítható.
+
+ÚJ A 0.3.0-BAN: ÁTDOLGOZOTT KEZELŐFELÜLET
+-----------------------------------------
+  • Keresés mindenben (a fő ablak jobb felső sarkában): beállítás, zóna, futás és súgó.
+    Ékezet nélkül is működik (pl. „korrekcio”, „kuplung”, „palyaelhagyas”).
+  • Teendők panel a fő ablak tetején: minden, amit javítani kell (HIBA), amit érdemes
+    ellenőrizni (FIGYELEM) és a tudnivalók (INFÓ) – mindegyik mellett egy gomb, ami
+    odavisz, ahol javítani kell (pl. „Zóna megnyitása”, „Mentés most”).
+    A fülek nevén is látszik: „Pálya (2 hiba)”, „Eredmény (!)”, „Beállítások (3 mód.)”.
+  • Lenyíló szekciók mindenhol (a fejlécre kattintva nyílik / csukódik, és megjegyzi).
+  • Beállítások: minden beállításnál ott a leírás és a „Mit változtat” sor, színes címkével
+    (pontszám / nullás kör / csak jelzés / felismerés / megjelenés). Ami eltér az alaptól,
+    azon „MÓDOSÍTVA · alap: …” jelölés és „Alapra” gomb van. Szűrő: „Csak a módosítottak”.
+    Változtatás után kiírja, mi mire változott, és mit érint.
+  • HUD: modulok ki-be kapcsolása, Fel / Le sorrend, előbeállítások (Részletes, Minimál,
+    Közvetítő), méret (0,75–1,5×) és háttér-erősség.
+  • Élő fül és Eredmény fül: a blokkok / szekciók ki-be kapcsolhatók és rendezhetők
+    (Élő fül: „Elrendezés…” gomb; mindkettő a Beállítások aljáról is).
+  • Pálya fül 4 lépésben (1. Pályaterv, 2. Kapuk, 3. Zónák, 4. Ellenőrzés), mindegyiknél
+    látszik, kész-e (KÉSZ / HIÁNYZIK / HIBA). A hibás zóna a listában pirossal jelölve, és
+    kijelölve „Ezt javítani kell” doboz mondja meg, mi a baj és mi a teendő.
+  • Kuplung: a program menet közben felismeri, merre számol az autó kuplungértéke, így a
+    „Hajtás VAN / NINCS” és a kuplungsáv minden autón helyes irányú (ezt a T05 teszt ellenőrzi).
+  A pontozás nem változott: a 0.2.1-gyel mentett futások ugyanazt az eredményt adják (0.3.1-ben sem).
+
+Mit tud ez a verzió összesen?
+  • Driftszög mérése valós időben (élő nézet + HUD ablak).
+  • Pályaterv készítése a játékon belül: START / JUDGING / FINISH vonal,
+    zónák (OZ, IZ, falas zóna, touch and go, IC pont), zónánkénti súly, no-go területek.
+  • Solo futás pontozása a DM 2025 szerint: Line 60, Angle 20 (zónánként), Stílus 20 (indítás 5,
+    folyamatosság 10, elkötelezettség 5); a szög csak a zónán belül számít, az összpont mindig 100.
+  • Fault-gyűjtő: egykerekes (−1 pont/db, a 3. nullás kör), kétkerekes (nullás kör),
+    korrekció/legyezés (jelzés), fal utáni mentés (külön kategória, jelzés),
+    túldobás 90° fölött (jelzés), beforgás 95° fölött vagy megállás (nullás kör),
+    visszarakás a bírálat alatt (nullás kör), falérintés flowban (információ),
+    minimális tempó alatt (jelzés, ha a pályatervben meg van adva).
+  • Line pont csak drift közben jár: aki szög nélkül gurul végig a vonalon, nem kap pontot.
+  • Pályaelhagyás magától, külön rajzolás nélkül:
+      – a zónák vonalai egyben pályahatárok: az OZ külső vonalán vagy az IZ belső vonalán
+        túl kerülő kerék pályaelhagyás (a touch and go vonala alapból nem, bekapcsolható);
+      – a kerék füvön / földön / murván / homokon;
+      – az AC saját pályahatára (ha a pálya jelzi).
+    A „Pályahatár” (HATÁR) vonal csak opcionális kiegészítés két zóna közötti szakaszra.
+    Önellenőrzés: ha egy zóna vonalán az autó KÖZEPE is áthalad, az nem pályaszél (rossz helyre
+    rajzolt vonal) – ott a program nem ad pályaelhagyást, hanem HIBÁT jelez a Teendőknél.
+  • Mérhető stílus (20 pont): indítás, folyamatosság, elkötelezettség – a telemetriából.
+  • FullSend-szerű eredménybontás: kártyák, zónakártyák, pályatérkép az eseményekkel.
+  • Minden futás teljes telemetriával mentődik fájlba – ebből a beállításokat
+    utólag is hangolni tudjuk, és egy futást gombnyomásra újra lehet pontozni.
+
+Ami még NINCS benne (2. fázis): tandem pontozás, online adatcsere a pilóták és a bírók
+között, bírói / közvetítői jogosultság Steam ID alapján, közvetítői HUD a bírói adatokkal,
+kvalifikációs tábla, Top 32 ágrajz, eredménykártya és Discord-küldés.
+Ebben a tesztverzióban a pilóta is látja a pontját.
+
+
+1. TELEPÍTÉS
+-------------
+A PrikezsiaGang szerveren NEM KELL TELEPÍTENI: a szerver belépéskor elküldi a programot (lásd 0. pont,
+Ctrl+Shift+D). A telepített változat annak kell, aki pályatervet készít, hangoláshoz telemetriát
+ment, vagy szerver nélkül (egyedül, practice módban) használja a programot.
+
+Kell hozzá: Custom Shaders Patch (a 0.3.0 preview-n készült; a szerver legalább 0.2.0-t kér),
+Content Manager ajánlott.
+
+  A) Csomagold ki a zipet az Assetto Corsa főmappájába (ahol az acs.exe van),
+     hogy ez a mappa jöjjön létre:
+        assettocorsa\apps\lua\CHT_DriftJudge\CHT_DriftJudge.lua
+     Ha a régi verzió már fent van, a kicsomagolás felülírja – ez így jó, a beállítások,
+     pályatervek és futások NEM vesznek el (azok a Dokumentumok mappában vannak).
+  VAGY
+  B) Húzd rá a zip fájlt a Content Manager ablakára, és telepítsd.
+     Ha a Content Manager nem ismeri fel, használd az A) módot.
+
+A játékban a jobb oldali app-sávban két ablak jelenik meg:
+  • CHT Drift Judge – a fő ablak (Élő, Eredmény, Futások, Pálya, Beállítások fülek).
+    A fejlécében látszik a verzió: v0.3.8 – ha nem ezt látod, a régi verzió fut.
+  • CHT Drift HUD   – részletes kijelző: szög középről (bal / jobb), sebesség, fokozat,
+    fordulatszám, kormányállás, gáz, fék, kézifék, kuplung, hajtás (van / nincs) és
+    kerékkipörgés, zóna, hibák, utolsó pont. A HUD ablak fejlécében lévő fogaskerékkel
+    (vagy Beállítások → HUD modulok) minden modul ki-be kapcsolható és sorba rendezhető,
+    és van 3 előbeállítás: Részletes, Minimál, Közvetítő. Itt állítható a méret és a háttér.
+    Ha a jobbos drift balra mutat, a „Szögmérő irányának megfordítása” opcióval cserélhető.
+
+A fájlok ide kerülnek:
+  Dokumentumok\Assetto Corsa\CHT Drift Judge\
+     settings.json                    – beállítások
+     layouts\<pálya>\<név>.json       – pályatervek (ezeket lehet egymásnak átadni)
+     runs\<pálya>\*.json              – futások (eredmény + telemetria)
+
+
+2. PÁLYATERV KÉSZÍTÉSE (egyszer kell pályánként)
+-------------------------------------------------
+Legjobb gyakorló (practice) módban, egyedül. A Pálya fül 4 lenyíló lépésből áll; a lépés
+fejlécén látszik, kész-e. Ami hiányzik vagy hibás, az a Teendők panelen is megjelenik.
+
+  a) 1. Pályaterv: írj be egy nevet → „Új üres terv”.
+
+  b) 2. Kapuk: állj az autóval a START vonalra, és nyomd meg az „Az autó helyére”
+     gombot (a szélességet a csúszkán állíthatod). Ugyanígy a JUDGING és a FINISH.
+     Egérrel is lehet: „Egérrel” gomb, majd kattints a pályán a vonal két végére
+     (szabad kamerával, F7, a legkényelmesebb).
+     A START nem kötelező: ha nincs, a futás a JUDGING vonalnál indul.
+
+  c0) 3. Zónák – AUTOMATIKUSAN A FESTÉSBŐL (kísérleti, ha a pályán festve vannak a zónák):
+     • Állj az autóval a pályán a festett zóna mellé, menetirányba nézve (ebből tudja a program,
+       melyik oldal a pálya, és merre a menetirány) – de úgy, hogy az autó NE takarja a festést.
+     • Állítsd a kamerát (F7) felülről a zóna fölé, hogy az egész zóna látszódjon, és ne takarja ablak
+       (ha a program a képernyőképet használja, ez kell hozzá; a felülnézeti képnél mindegy).
+     • „Zóna a festésből” rész → válaszd ki a típust (OZ / IZ / TNG / IC / HATÁR) → Kép forrása:
+       Automatikus (ajánlott) → „Indítás” → kattints:
+         – FESTETT KERET (vonalakkal körberajzolt zóna, belül aszfalt): a keret BELSEJÉBE,
+           a közepéhez közel – NEM a keret vonalára. A keretnek nem kell zártnak lennie: ha egy
+           oldala hiányzik, vagy kopott / megszakadt, a vonalvégek között lezárja (narancs vonal);
+         – teli festett terület: a festésre;
+         – egyetlen festett vonal (pl. TNG vonal): a vonalra;
+         – IC pont: a festett jelre (pötty, kis négyzet, vagy a vonal azon pontjára).
+     • Pár másodperc múlva előnézet jelenik meg: lila = a zóna vonala, kék = a keret / festés másik
+       oldala, narancs = lezárt nyitott oldal / hézag. Kiírja a felismert hosszt, szélességet és a kép
+       forrását. Keretnél a zóna vonala az autótól távolabbi oldal (a festett vonal KÖZEPE, nyitott
+       oldalnál a lezáró vonal), a zóna szélessége a két hosszú oldal távolsága.
+     • „Elfogadás: új … zóna” – kész. Ha rossz szélét választotta: „Másik szél”; ha a festés közepe
+       kell: „Középvonal”. Ha a pipa be van kapcsolva, nem új zóna készül, hanem a kijelölt zóna
+       vonala cserélődik.
+     • Ha nem talál semmit, vagy hibát ad: olvasd el a hibaüzenetet (megmondja, ha a kép egy része
+       nem látszott); állíts a „Színtűrés”-en (ha kifolyik a keretből → kisebb; ha túl kicsi részt
+       talál → nagyobb), vagy próbáld „Képernyő (amit látsz)” forrással.
+     • Hiba esetén minden kép és adat a Dokumentumok\Assetto Corsa\CHT Drift Judge\debug mappában
+       van (festes_proba_*.png, festes_kepernyo.png, festes_utolso.json) – a hibaüzenet alatti gomb
+       és a Beállítások → Adatmappák → „Debug” is megnyitja.
+     • A felismerés közben a játék egy-két másodpercre akadozhat.
+     Utána a zóna mérete a „Méret és helyzet” részben finomítható (lásd lent).
+
+  c) 3. Zónák – KÉZZEL: „+ OZ”, „+ IZ”, „+ FAL”, „+ TNG” gombbal új zóna. Utána a vonal pontjai
+     (a kijelölt zóna „Vonal és pontok” részében):
+       • Kattintással: „Pontok kattintással”, majd kattints végig a felfestett vonalon
+         MENETIRÁNYBAN. Az egér alatt kiírja, hány méterre vagy a vonaltól.
+       • Vezetéssel: válaszd ki az autó pontját (pl. „Hátsó sarok – külső”), kapcsold be a
+         „Nyomkövetés vezetés közben” opciót, és lassan hajts végig a vonal / fal mellett.
+         Az „Autópont mutatása” bekapcsolásával látod, melyik pontot követi.
+         A külső/belső sarkot a pálya AI-vonalához méri; az első pont után a nyomkövetés
+         mindig az előző ponthoz közelebbi sarkot követi, így nem ugrik át a másik oldalra.
+         Minden zónát külön kell bejárni: zóna elején pipa be, a végén pipa ki.
+     A zónát NEM kell körbezárni: a zóna egy vonal (pályaszél, fal vagy TNG vonal).
+     Melyik zóna mit néz:
+       OZ   – a hátsó lökhárító (külső sarok) távolsága a külső vonaltól, a zóna hosszán.
+       IZ   – az első lökhárító távolsága a belső vonaltól.
+       FAL  – úgy pontoz, mint egy sima zóna (végig ki kell tölteni, a szög is számít),
+              de max pont csak 4 cm-en belül jár. Ha a hátulja hozzáér a falhoz, az 0 cm.
+       TNG  – touch and go: az első kerék legkisebb távolsága a vonaltól, 3 lépcsőben.
+       FONTOS: a zóna vonala legyen pontosan a felfestett vonalon / pálya szélén, mert a
+              program ezt pályahatárként is használja (a vonalon túl = pályaelhagyás).
+       HATÁR – opcionális pályahatár (nem pontoz): ha egy kerék a vonalon túlra kerül, az
+              pályaelhagyás. Csak ott kell, ahol nincs zónavonal.
+              A rövid piros jelek a pálya (bent) felé mutatnak – ha fordítva, „Oldal megfordítása”.
+     A halvány vonalak a zóna sávját mutatják (100%-os és 0%-os távolság). Ha nem azon
+     az oldalon vannak, ahol az autó megy, nyomd meg az „Oldal megfordítása” gombot.
+     Íves vonalra 2–3 méterenként kell pont; 2 ponttal a program egyenes húrt húz a kanyar
+     helyett, és FIGYELMEZTET is miatta. Ha a vonal tényleg egyenes, nyomd meg a „Rendben, így jó”
+     gombot – akkor nem szól többet.
+
+  c2) A zóna mérete és helye utólag (kijelölt zóna → „Méret és helyzet”):
+       • Zóna szélessége (itt már 0% Line) és a teljes pont sávja (eddig 100% Line) – csúszkával,
+         vagy a mellette lévő mezőbe beírva (Enter; tizedesvessző is jó). A pályán a színes kitöltés
+         azonnal mutatja. Az „Alapra” gomb visszaállítja a Beállítások értékére. TNG-nél a három
+         vonal távolsága állítható. IC pontnál a két kör sugara, és a pont nyilakkal mozgatható.
+       • Pályaelhagyás ennél a zónánál: ki-be, és csúszkával, hogy a vonaltól hány méterre
+         kezdődjön (a piros sáv mutatja). TNG-nél a három vonal arányosan állítható.
+       • Hossz: a pontos hossz beírható (a zóna VÉGE változik).
+       • Eleje / Vége: −1 m, −25 cm, +25 cm, +1 m, vagy a sor végi mezőbe beírt érték (+ hosszabb,
+         − rövidebb).
+       • Eltolás oldalra: „Pálya felé” / „Kifelé” 2 vagy 10 cm-rel, vagy beírt értékkel az egész vonal.
+       • Pont mozgatása (kattints a pontra, majd az új helyére), Pont beszúrása, Pont törlése.
+       Minden lépés visszavonható (Visszavonás gomb az 1. lépésnél).
+     Színek a pályán: a zóna teljes területe halványan, a teljes pontot érő sáv erősebben színezve;
+     a vonalon túli piros sáv = ott már pályaelhagyás. Ha a színes sáv nem a pálya felé esik:
+     „Oldal megfordítása”.
+
+  d) Súlyozás (3. Zónák → „Súlyozás”): új tervnél AUTOMATIKUS – a hosszabb és kanyarodóbb zóna
+     többet ér, a pontozás is így mér. Egy zónának a „Saját” pipával fix súlyt adhatsz, vagy az
+     egész tervet „Kézi”-re válthatod, és akkor minden zóna súlyát te adod meg (pl. touch and go 20,
+     hosszú zóna 30). A program mindig 100 pontra arányosít: pl. 30 + 30 + 30 + 20 = 110 esetén egy
+     30-as zóna 30/110 × 100 ≈ 27,3 pontot ér. A zónalistában látszik: „súly 30 → 27,3 pont”
+     (automatikusnál „auto súly …”).
+
+  e) No-go terület (ha kell): jelöld ki a zónát → „Tiltott terület (no-go)” → „No-go terület
+     rajzolása” → kattints a sarkaira → „Sokszög lezárása”. Ami a zónából no-go-ba lóg,
+     levonódik a Line-ból.
+
+  f) „Mentés”. A pályaterv fájlja a layouts mappában van, odaadható a többieknek.
+
+  g) 4. Ellenőrzés: menj egy tesztkört. Ha egy zóna vonalán az autó közepe is áthaladt
+     (rossz helyre rajzolt vonal), a zóna HIBA jelzést kap, és az „Ezt javítani kell” doboz
+     gombjaival rögtön újrarajzolhatod (nyomkövetés vagy kattintás). Ha a vonal szándékosan
+     nem a pálya széle, a „Rendben, így jó” gombbal jóváhagyhatod.
+
+
+3. FUTÁS ÉS EREDMÉNY
+--------------------
+  • Hajts át a START, majd a JUDGING, végül a FINISH vonalon. A bírálat JUDGING és FINISH
+    között tart. Ha újra átmész a START-on, a futás elölről indul.
+    Visszarakás (reset / teleport / boxba ugrás): a JUDGING előtt megszakítja a futást, a bírálat
+    alatt nullás kör (0.3.7-től; Beállítások → Futás és mentés → kikapcsolható).
+  • A FINISH után az Eredmény fül mutatja a bontást, és a futás elmentődik.
+    Az Eredmény fül jobb felső sarkában van a futás IDEJE – a tesztjegyzőkönyvbe ezt írd fel.
+  • Az Eredmény fül szekciói: Összegzés, Figyelmeztetések (ha van), Zónák, Stílus,
+    Pályatérkép és zóna részletei, Események (minden jelzés időrendben), Futás adatai.
+    Az Események között a pályaelhagyásnál zárójelben az is ott van, MI jelezte:
+    „(OZ 1 vonalán túl)”, „(fű/murva)”, „(AC pályahatár)” vagy „(határ: …)”.
+  • „Futás lezárása most”: ha nem jutsz el a FINISH-ig, de látni akarod az eddigit.
+  • Futások fül: „Megnyitás” – a mentett eredmény; „Újrapontozás” – a felvett
+    telemetriát a MOSTANI pályatervvel és beállításokkal pontozza újra (hangoláshoz).
+  • „Szabad felvétel”: pályaterv nélkül is rögzít (max. 10 perc) – ezt is el lehet küldeni.
+
+
+4. TESZTELÉSI TERV – PONTOS LÉPÉSEK
+-----------------------------------
+ELŐKÉSZÜLETEK (minden tesztelőnél, egyszer):
+  1. Telepítsd a 0.3.8-at, és nézd meg, hogy a fő ablak fejlécében v0.3.8 látszik (a szerveren a
+     szerverről kapott változat fejlécében „v0.3.8 · online”).
+  2. Beállítások fül → ha a fül neve „Beállítások (… mód.)”, nyomd meg a „Mind vissza
+     alapra” gombot (és utána az „Igen, mind vissza alapra”-t). Így mindenki ugyanazzal a
+     beállítással tesztel, és az eredmények összevethetők. Ha egy teszt kifejezetten
+     beállítás-módosítást kér, utána állítsd vissza.
+  3. Pálya: lehetőleg a Trackwood Pro Reverse, ugyanazzal a pályatervvel, mint eddig
+     (vagy javítsd ki rajta az OZ 1-et a T10 szerint). Autó: a BMW E36, amivel eddig is.
+  4. Nyiss egy jegyzetet a 7. pontban lévő jegyzőkönyv-mintával. MINDEN futás után írd fel:
+     a teszt számát (pl. T14), a futás idejét (Eredmény fül jobb felső sarka), mit csináltál,
+     mit várt volna a bíró, és mit mutatott a program.
+  5. Ha bármikor piros hibaüzenet, üres ablak vagy fagyás van: képernyőkép + a CSP naplója
+     (Dokumentumok\Assetto Corsa\logs\custom_shaders_patch.log).
+
+Sorrend: az „A” blokk a legfontosabb (első alkalom), utána „B”, végül „C”, ha van idő.
+Egy teszt = egy futás, kivéve, ahol más szerepel. A zárójelben lévő idő csak becslés.
+
+=== A BLOKK – ELSŐ ALKALOM (kb. 1,5–2 óra) ===
+
+T01 – Az új kezelőfelület áttekintése (10 perc, futás nélkül)
+  Lépések: nyisd meg sorban mind az 5 fület. Kattints a lenyíló szekciók fejlécére
+  (nyílik / csukódik). Csukd be a Teendők panelt, válts fület, majd zárd be és nyisd meg
+  újra a fő ablakot.
+  Elvárt: a szekciók állapota megmarad; a Teendők panel a fejlécen mutatja a teendők számát.
+  Írd fel: mi nem érthető, mi lóg ki / fedi egymást, melyik szöveg túl hosszú vagy apró
+  (képernyőkép a legjobb, ablakmérettel együtt).
+
+T02 – Keresés (5 perc)
+  Lépések: a jobb felső keresőbe írd be egymás után: „korrekcio”, „kuplung”, „fal”,
+  „celszog”, „palyaelhagyas”, „OZ”, a saját neved (pilótanév), „hud”.
+  Kattints egy-egy találatra.
+  Elvárt: mindegyikre van találat (beállítás, zóna, futás vagy súgó), és a kattintás a
+  megfelelő helyre visz (a Beállítások fülön a keresés ki is van töltve).
+  Írd fel: mire kerestél, amire NEM jött jó találat (ez fontos: így bővítjük a keresőt).
+
+T03 – Beállítás módosítása és visszaállítása (5 perc, futás nélkül)
+  Lépések: Beállítások → keress rá: „celszog” → állítsd a Célszöget 65°-ra.
+  Elvárt: megjelenik a „MÓDOSÍTVA · alap: 72°” jelölés és az „Alapra” gomb; felül kiírja,
+  mi mire változott és mit érint; a fül neve „Beállítások (1 mód.)”; a Teendőknél INFÓ
+  jelenik meg; a „Csak a módosítottak” szűrő csak ezt mutatja.
+  Utána: „Alapra” gomb → minden jelölés eltűnik.
+  Írd fel: érthető-e a „Mit változtat” szöveg.
+
+T04 – HUD modulok (10 perc, a pályán állva és lassan gurulva)
+  Lépések: HUD ablak fogaskerék → próbáld ki a Részletes, Minimál, Közvetítő
+  előbeállítást; kapcsolj ki-be modulokat; tegyél egy modult Fel / Le gombbal máshová;
+  állítsd a méretet 0,75×-re és 1,5×-re, a hátteret 0%-ra és 100%-ra.
+  Elvárt: a HUD azonnal követi; a játék újraindítása után is megmarad.
+  Írd fel: melyik előbeállítást használnátok edzésen és közvetítésen; mi hiányzik a HUD-ról.
+
+T05 – Kuplung és hajtás (5 perc)
+  Lépések: 1) hajts legalább 30 km/h-val, gázon, 2-3 másodpercig (ebből tanulja meg a program
+  a kuplung irányát). 2) állj meg, tedd sebességbe, nyomd le TELJESEN a kuplungot.
+  3) engedd fel, adj egy kis gázt. 4) tedd üresbe.
+  Elvárt: lenyomott kuplungnál a Kuplung sáv 100% és „Hajtás: NINCS (kuplung)”;
+  felengedve 0% és gázzal „Hajtás: VAN”; üresben „NINCS (üres)”.
+  Kipörgés (0.3.4): egyenesen, egyenletes tempónál 0–5%; álló helyből padlógázzal sokat mutat; driftben
+  a hajtott kerekek km/h-ja (Élő fül, a Kipörgés sáv alatt) nagyobb, mint a talajon mért km/h, és a %
+  ennek a különbsége. Írd fel, reálisnak tűnik-e.
+  Írd fel: ha FORDÍTVA mutatja (lenyomva 0%). Írd fel a kormány / pedál típusát is.
+
+T06 – Szögmérő iránya (5 perc)
+  Lépések: menj egy balos, majd egy jobbos driftet (bármelyik kanyarban).
+  Elvárt: a mutató középről a drift irányának megfelelő oldalra tér ki, a szám reális.
+  Írd fel: balos kanyarban merre mutatott; jó-e így, vagy fordítva kellene
+  (a HUD beállításban „Szögmérő irányának megfordítása”).
+
+T07 – Tiszta referencia futások (3 futás)
+  Lépések: 3 teljes futás START → JUDGING → FINISH, a legjobb tudásod szerint, hiba nélkül.
+  Elvárt: nincs pályaelhagyás és nullás kör; a pont 50–90 között; a Teendőkben nincs új HIBA.
+  Írd fel: a bíró szerint hány pontot ért a futás (0–100), és mit mutatott a program.
+  Ha a program pályaelhagyást jelzett, de szerintetek nem volt: az Események sorát szó
+  szerint (vagy képernyőképen).
+
+T08 – Egy kerék kint az OZ külső vonalán (2 futás)
+  Lépések: tiszta futás, de egy OZ zónában (ahol a vonal tényleg a pálya szélén van, pl.
+  OZ 2) szándékosan tedd ki EGY hátsó kereket a vonalon túl kb. fél másodpercre, aztán vissza.
+  Elvárt: Események: „Pályaelhagyás – 1 kerék (OZ 2 vonalán túl)”; −1 pont levonás;
+  a kör érvényes.
+  Írd fel: valóban 1 kerék volt-e kint (videó / replay alapján), és hány mp-nél.
+
+T09 – Két kerék kint egyszerre (1 futás)
+  Lépések: egy OZ-ban mindkét hátsó kereket vidd ki a vonalon túl.
+  Elvárt: „Pályaelhagyás – 2 kerék (…)”, a futás végén NULLÁS KÖR („Kétkerekes pályaelhagyás”).
+
+T10 – OZ 1 vonalának javítása és ellenőrzése (15 perc + 1 futás)
+  Az eddigi tesztfutások szerint az OZ 1 vonala a menetvonalon van, nem a pálya szélén.
+  Lépések: Pálya fül → 3. Zónák → OZ 1 kijelölése → „Ezt javítani kell” doboz →
+  „Pontok törlése és újrarajzolás” (kattintással) VAGY „Nyomkövetés indítása” (Autó pontja:
+  „Hátsó sarok – külső”, lassan a pálya KÜLSŐ szélén végig). Mentés. Utána 1 tiszta futás.
+  Elvárt: a futás után az OZ 1-nél NINCS HIBA a Teendőkben, és a Pálya fül 4. lépése
+  „RENDBEN” vagy csak figyelmeztetést mutat.
+  Írd fel: mennyi idő volt a javítás, és mi volt nehéz benne.
+
+T11 – Szándékosan rossz helyre rajzolt vonal (önellenőrzés) (1 futás)
+  Lépések: készíts egy próba-pályatervet („Mentés másként”, pl. „Próba”), és benne egy OZ
+  vonalát rajzold a pálya KÖZEPÉRE (a menetvonalra). Menj egy futást.
+  Elvárt: nem lesz emiatt nullás kör; a Teendőkben HIBA: „… a vonal nem a pálya szélén van”,
+  a zónánál „Ezt javítani kell”. A végén állj vissza az eredeti pályatervre.
+
+T12 – Beforgás és túldobás (2 futás)
+  Lépések: a) egy driftben menj szándékosan 90° és 95° közé, de ne forogj be;
+  b) egy másik futásban forogj be (95° fölé; 0.3.7-től a határ 95°).
+  Elvárt: a) „Túldobás (…°)” jelzés, a kör érvényes; b) „Beforgás (…°)”, NULLÁS KÖR.
+  Írd fel: a bíró szerint a) túldobás volt-e, b) mikor (hány foknál) számít beforgásnak.
+
+T13 – Lassú végiggurulás drift nélkül (1 futás)
+  Lépések: a JUDGING és FINISH között gurulj végig a zónák mentén egyenesen, szög nélkül.
+  Elvárt: a zónák Line és Angle értéke 0 vagy közel 0, az összpont nagyon alacsony.
+
+T14 – Korrekciók (4 futás) – EZ A LEGFONTOSABB HANGOLNI VALÓ
+  Lépések: a) 2 futás, amiben szándékosan korrigálsz (pl. a 2. zónában erős visszakormányzás
+  vagy legyezés); b) 2 futás, amiben biztosan NEM korrigálsz, de erős, határozott
+  szögváltozás van (gyors irányváltás, mély indítás).
+  Elvárt: a) „Korrekció (szögesés)” vagy „Korrekció (legyezés)” jelzés a megfelelő helyen;
+  b) nincs korrekció-jelzés.
+  Írd fel MINDEN korrekciónál: hol volt (zóna), és jelezte-e. Minden téves jelzésnél:
+  az esemény ideje (s) az Eredmény → Események listából.
+
+=== A2 BLOKK – A 0.3.1 ÚJDONSÁGAI (kb. 40 perc, az A blokk után vagy helyett, ha kevés az idő) ===
+
+T31 – Zóna a festésből: festett keret (OZ) (15 perc, futás nélkül)
+  Lépések: készíts egy próba-pályatervet („Mentés másként”, pl. „Festés teszt”). Állj az autóval
+  egy festett OZ keret mellé, menetirányba. Pálya fül → 3. Zónák → „Zóna a festésből” → Típus: OZ →
+  „Indítás” → kattints a keret BELSEJÉBE, a közepéhez közel (F7). Várd meg az előnézetet.
+  Elvárt: „festett keret / terület” felismerve; a lila vonal a pálya szélén lévő (autótól távolabbi)
+  sárga vonal közepén fut végig, a kék a másik hosszú oldalon; a kiírt hossz és szélesség nagyjából
+  egyezik a kerettel. Elfogadás után a zóna színes kitöltése a keretet fedi.
+  Próbáld ki azt is, ha a keret VONALÁRA kattintasz: érthető hibaüzenetet kell adnia.
+  Próbáld ki a „Másik szél” és a „Középvonal” gombot is, majd „Elvetés” vagy „Elfogadás”.
+  Írd fel: a kiírt hossz és szélesség; mennyire fut a lila vonal a festés szélén (cm-re becsülve);
+  mennyi ideig tartott; akadozott-e a játék. Ha hibaüzenet jött: a szövegét szó szerint.
+  Készíts képernyőképet az előnézetről (felülről, F7).
+  Ha a lila vonal TÜKRÖZVE vagy ELFORDULVA jelenik meg a festéshez képest, az nagyon fontos
+  visszajelzés – írd fel, és küldj róla képet.
+
+T32 – Zóna a festésből: más festések (10 perc)
+  Lépések: ugyanígy próbáld ki egy IZ (clipping) festésen, egy vékony festett vonalon (pl. TNG
+  vagy pályaszél-vonal) és egy másik színű festésen. Ha nem talál vagy az aszfaltra folyik,
+  állíts a Színtűrésen.
+  Elvárt: a vékony vonalnál „festett vonal” és a lila vonal a festés közepén fut.
+  Írd fel: melyik festésnél működött, melyiknél nem, és milyen Színtűrés kellett.
+
+T33 – Zóna mérete utólag (5 perc)
+  Lépések: jelöld ki a T31 zónáját → „Méret és helyzet”: állítsd a szélességet 4 m-re, a vége
+  „+1 m”, az eleje „−25 cm”, „Pálya felé 10 cm”; a „Pályaelhagyás kezdete” csúszkát 0,5 m-re (a piros
+  sáv arrébb kerül), majd kapcsold ki-be „A vonalon túl pályaelhagyás” pipát; egy TNG zónánál állítsd
+  az 1. vonalat (a másik kettő arányosan követi); próbáld ki a Pont mozgatása / beszúrása / törlése
+  gombot. Végül nyomd meg többször a Visszavonást.
+  Elvárt: a pályán a színes kitöltés minden lépést azonnal mutat; a Visszavonás mindent visszacsinál.
+
+T34 – Színek és pályaelhagyás sáv (5 perc)
+  Lépések: nézd meg egy OZ zónát a pályán: sárga kitöltés a zónán, piros sáv a vonalon túl.
+  Beállítások → keress rá: „szín” → „Zónák színei”: változtasd meg az OZ színét; Megjelenítés →
+  „Kitöltés erőssége” 0,10 és 0,60; „Mi látszódjon a pályán” → „Zónák színes kitöltése” és
+  „Pályaelhagyás sáv” → „Soha”, majd vissza „Mindig”-re.
+  Elvárt: minden változás azonnal látszik a pályán. A piros sáv ott kezdődik, ahol a T08 tesztben
+  a kerék már pályaelhagyásnak számított.
+  Írd fel: jól látszik-e a pálya a kitöltésen át; melyik erősség a legjobb; FPS-változás.
+
+T36 – Zónák súlyozása (10 perc, futás nélkül + 1 futás)
+  Lépések: a próba-pályatervben (vagy egy újban) Pálya fül → 3. Zónák → „Súlyozás”: nézd meg az
+  „Automatikus” módot – minden zóna hossza, íve, súlya és pontja (a 100-ból). Adj egy zónának
+  „Saját” súlyt, állítsd át; majd válts „Kézi”-re és vissza. Utána menj egy futást, és az Eredmény
+  fülön nézd meg, hogy a zónák max pontja a Súlyozás táblázat szerinti-e.
+  Írd fel: igazságosnak tűnik-e az automatikus elosztás (melyik zóna ér túl sokat / keveset), és
+  milyen arányt adnátok ti (pl. hosszú OZ 30, TNG 20). Ebből hangolom a képletet.
+
+T37 – Mi látszódjon a pályán (10 perc)
+  Lépések: Beállítások → „Mi látszódjon a pályán”. Pilóta szerepben: zárd be a Pálya fület (válts
+  az Élő fülre) és vezess – a zónák NEVEI ne látszódjanak, a zónák és a színek igen; nyisd meg a
+  Pálya fület – a nevek megjelennek. Válts Bíró szerepre (minden látszik), majd Közvetítőre (csak
+  a zónák és a színek). Állíts át egy-két elemet, és nézd meg, hogy a pályán azonnal követi-e.
+  A végén állítsd vissza a saját szerepedet.
+  Írd fel: jók-e az alapbeállítások a pilótának, a bírónak és a közvetítőnek; mit állítanátok másképp.
+
+T35 – Teendők jóváhagyása és elrejtése (5 perc, futás nélkül)
+  Lépések: ha van „csak 2 pont hosszú szakaszon” figyelmeztetés egy EGYENES zónánál, nyomd meg a
+  „Rendben, így jó” gombot. A Teendők panelen próbáld ki: „Csak ha HIBA van”, „Elrejtve”, majd a
+  felső sorban „Teendők megjelenítése”. A „Jóváhagyva / elrejtve” listából állíts vissza egyet.
+  Elvárt: a jóváhagyott tétel eltűnik (és a játék újraindítása után sem jön vissza, ha a pályaterv
+  el van mentve); ha a zóna vonalát módosítod, újra megjelenik.
+
+=== A3 BLOKK – A 0.3.7 ÚJDONSÁGAI (kb. 45 perc) ===
+
+T38 – Zóna a festésből: képforrás és nyitott keret (15 perc, futás nélkül)
+  Lépések: próba-pályaterv („Mentés másként”, pl. „Festés 037”). Állj az autóval egy festett OZ keret
+  mellé (ne takarja a festést). Kamera: F7, felülről a keret fölé, hogy az egész keret látszódjon, és
+  ne takarja ablak. Pálya fül → 3. Zónák → „Zóna a festésből” → Típus: OZ → Kép forrása: Automatikus →
+  „Indítás” → kattints a keret BELSEJÉBE.
+  Elvárt: előnézet (lila vonal a zóna vonala). A jelzésben látszik a forrás (felülnézeti kép vagy
+  képernyőkép). A Trackwood fehér „]” keretnél (a fal felőli oldala nyitott) narancs vonal zárja le a
+  nyitott oldalt, és a lila vonal ott fut.
+  Próbáld ki ugyanezt „Képernyő (amit látsz)” forrással is, és egy kopott / hézagos kereten.
+  Írd fel: melyik forrás működött; mennyire fut a lila vonal a festésen (cm-re becsülve); a kiírt
+  hossz és szélesség; mennyi ideig tartott. Hibánál a szöveget szó szerint + a debug mappát.
+
+T39 – IC pont (10 perc + 2 futás)
+  Lépések: a próba-pályatervben egy kanyar belső clipjénél „+ IC” → „Pont kattintással” → kattints a
+  belső érintési pontra (vagy állj oda az autó belső első sarkával: „Pont az autóhoz”; vagy „Zóna a
+  festésből” → IC → kattints a festett jelre). Nézd meg a türkiz köröket a pályán. Utána 2 futás:
+  a) az első lökhárítóval nagyon közel (10–30 cm) a ponthoz; b) kb. 1,5 m-re tőle.
+  Elvárt: Eredmény → IC kártya: a) „Legkisebb táv” kb. 0,1–0,3 m, Line kb. 100%; b) kb. 1,5 m, Line kb. 50%.
+  Írd fel: a bíró szerint mennyire volt jó az érintés, és mit mutatott a program.
+
+T40 – Beírható értékek (5 perc, futás nélkül)
+  Lépések: jelölj ki egy OZ-t → „Méret és helyzet”: a „Zóna szélessége” melletti mezőbe írd be: 3,25 →
+  Enter. A „Hossz” mezőbe írj be a mostaninál 2 m-rel nagyobbat → Enter. Az „Eleje:” sor végén lévő
+  mezőbe: -0,5 → Enter. Az eltolás mezőbe: 0,05 → Enter. Végül Visszavonás többször.
+  Beállítások → keress rá: „celszog” → a mezőbe: 70 → Enter, majd „Alapra”.
+  Elvárt: minden érték pontosan a beírt lesz, a pályán azonnal látszik; a Visszavonás mindent visszacsinál.
+
+T41 – Adatmappák (2 perc)
+  Lépések: Beállítások → „Adatmappák” → nyomd meg sorban a gombokat; a Futások fülön is.
+  Elvárt: mindegyik a megfelelő mappát nyitja meg a Windows Intézőben (a „Beállítások fájl” a
+  settings.json-t jelöli ki).
+
+=== A4 BLOKK – A VÁLASZOK SZERINTI PONTOZÁS (kb. 1 óra, 2 bíróval) ===
+
+T42 – Új pontfelosztás a bírókkal összevetve (10 futás)
+  Lépések: Beállítások → „Mind vissza alapra”. 10 futás különböző minőségben (jó, közepes, gyenge).
+  Mindkét bíró pontozza a DM-lap szerint (Line 60, Angle 20, Stílus 20 – az 1. bíró a Line-t, a
+  2. a Line-t és az elkötelezettséget, a 3. vagy ugyanaz a szöget, az indítást és a folyamatosságot).
+  Elvárt: az Eredmény fülön a Line / Angle / Stílus pont nagyjából a bírókéval egyezik, a sorrend
+  ugyanaz. Írd fel futásonként mindhármat (program és bírók), és ahol nagy az eltérés, miért.
+
+T43 – Stílus részei (4 futás)
+  a) szép futás, már a JUDGING vonalon driftelve; b) késői indítás (a JUDGING után 15–20 m-rel);
+  c) kettős indítás (a szög leesik, majd újra beindítod ugyanabba az irányba); d) gázelvétel driftben
+  (egy kanyarban többször elveszed a gázt).
+  Elvárt: Eredmény → Stílus: b) „Korai indítás” alacsony; c) „Szögvesztés nélkül” alacsony;
+  d) „Gázadás” alacsony; a) mind magas. Írd fel a három rész pontját és a bírók véleményét.
+
+T44 – Minimális tempó (3 futás)
+  Lépések: egy jó futás után Eredmény → Futás adatai → „Ez legyen a pálya referencia-tempója” → a
+  Pálya fülön mentsd a pályatervet (5. Minimális tempó: látszik a minimum és a teljes pont tempó).
+  Utána egy hasonló futás, majd egy szándékosan lassú (kb. 15 km/h-val lassabb átlaggal).
+  Elvárt: a lassú futásnál „Minimális tempó alatt” jelzés, és az Elkötelezettség / Minimális tempó 0%.
+  Írd fel: a minimum, amit a bírók reálisnak tartanak ezen a pályán, és hogy elég-e ez a súly (5 pont).
+
+T45 – Visszarakás a bírálat alatt (1 futás)
+  Lépések: a JUDGING után, futás közben nyomj resetet (vagy menj a boxba).
+  Elvárt: nullás kör „Visszarakás a bírálat alatt” okkal, és a futás megjelenik a Futások fülön.
+  Ugyanez a JUDGING előtt: csak „Futás megszakítva”.
+
+T46 – Kipörgés és HUD Edzés előbeállítás (5 perc + 1 futás)
+  Lépések: HUD fogaskerék → előbeállítás: „Edzés”. Állóhelyből padlógáz, majd egyenesen egyenletes
+  tempó, majd drift.
+  Elvárt: kipörgés 0–100% között: állóhelyből közel 100%, egyenesen 0–5%, driftben kb. 30–60%
+  (a Részletes nézetben a km/h különbség is). Futás után a HUD-on a pont Line / Angle / Stílus
+  bontásban. Írd fel, mi hiányzik még edzéshez.
+
+T47 – Régebbi CSP (ha van rá gép, 15 perc)
+  A válasz szerint a legrégebbi CSP a pilótáknál a 0.2.11. Ha valakinél ez (vagy 0.3 előtti) fut:
+  telepítsd az appot, nyisd meg a fő ablakot és a HUD-ot, menj egy futást.
+  Írd fel: a CSP pontos verzióját, melyik ablak / funkció nem működik, és a CSP naplóját
+  (Dokumentumok\Assetto Corsa\logs\custom_shaders_patch.log). A „Zóna a festésből” itt nem fontos.
+
+=== A5 BLOKK – A 0.3.8 ÚJDONSÁGAI (kb. 1 óra, a T50–T52-höz 2 gép kell a szerveren) ===
+
+T48 – Pályarajz ki-be (5 perc, futás nélkül, telepített vagy online változat)
+  Lépések: fő ablak felső sora → „Pályarajz: BE” gomb. Utána Ctrl+Shift+Z kétszer. Beállítások →
+  „Pályarajz és gyorsbillentyűk” → az „Pályarajz ki-be” sor gombja → nyomj le egy másik billentyűt
+  (pl. Ctrl+Shift+X), és próbáld ki, majd állítsd vissza.
+  Elvárt: KI állásban semmi nem látszik a pályán (zónák, színek, kapuk, feliratok), a HUD alján
+  „Pályarajz: KI”; BE állásban minden úgy látszik, mint előtte. Az új billentyű működik.
+  Írd fel: ha valami KI állásban is látszik, vagy a billentyű nem működik (milyen billentyű).
+
+T49 – Bírói levonás (2 futás)
+  Lépések: egy futás után Eredmény fül → Összegzés → „Bírói levonás” mezőbe: 2,5 → Enter, a
+  megjegyzésbe: „korrekció az OZ 2-ben”. Futások fül → nézd meg a futás sorát. Zárd be és indítsd
+  újra a játékot, nyisd meg a futást.
+  Elvárt: „Végső a bírói levonás után: …” (a program pontja −2,5); a Futások listában „x (−2,5)”;
+  újraindítás után is megvan (telepített változatnál a runs\<pálya>\biroi_levonasok.json fájlban).
+
+T50 – A program a szerverről (10 perc, a PrikezsiaGang szerveren)
+  Lépések: ha telepítve van a CHT Drift Judge, előbb nevezd át ideiglenesen az
+  assettocorsa\apps\lua\CHT_DriftJudge mappát (pl. _CHT_DriftJudge-ra), hogy ne fusson. Lépj be a
+  szerverre. Nézd az üdvözlő üzenetet. Ctrl+Shift+D (fő ablak), Ctrl+Shift+H (HUD). Mozgasd a fő
+  ablakot a tetejénél, méretezd a jobb alsó sarkánál; nyitott fő ablaknál mozgasd a HUD-ot is.
+  Beállítások → „Online változat és szerver” szekció. Ha a chat appban van „CHT Drift Judge”
+  bejegyzés, próbáld ki.
+  Elvárt: belépéskor az üzenet a gyorsbillentyűkkel; a fejlécben „v0.3.8 · online”; az ablakok
+  megnyílnak, mozgathatók; kilépés és újbóli belépés után ugyanott vannak.
+  Írd fel: a CSP verziót; mit mutat az „Online változat és szerver” szekció minden sora (főleg a
+  Steam ID és az „Üzenetek a szerveren” sor); hiba esetén a custom_shaders_patch.log-ot.
+
+T51 – Futások a bíróknál (2 gép: 1 pilóta + 1 bíró, 3 futás)
+  Lépések: mindkét gépen a szerverről kapott változat fusson. A pilóta 3 futást megy (1 legyen
+  nullás). A bíró gépén: Futások fül → „Szerverről érkezett futások” → „Másolás táblázatként” →
+  illeszd be egy jegyzetbe.
+  Elvárt: a bírónál mindhárom futás megjelenik a pilóta nevével, a ponttal és a hibákkal, ugyanazzal
+  a ponttal, mint a pilóta gépén; a nullásnál az ok. A beillesztett táblázat oszlopai rendben vannak.
+  Írd fel: eltért-e a pont a két gépen (ez a D18 kérdés is).
+
+T52 – Telepített app + szerverről kapott változat egy gépen (5 perc)
+  Lépések: nevezd vissza a mappát (CHT_DriftJudge), lépj be a szerverre.
+  Elvárt: csak egy HUD és egy pályarajz látszik (a telepített appé); a Ctrl+Shift+D nem nyit második
+  ablakot. A futások a telepített appból mennek a bíróknak (a T51 bírói listájában megjelennek).
+
+T53 – Pályaterv a szerverre (10 perc)
+  Lépések: a telepített appban a versenypálya kész, ellenőrzött pályaterve → Pálya fül → „Másolás”.
+  Illeszd be egy szövegfájlba, nevezd el a pályaterv nevével (pl. Alap.json), és küldd el nekem.
+  Ha felkerült: lépj be újra a szerverre (a telepített app kikapcsolva).
+  Elvárt: belépés után néhány másodperccel: „Pályaterv a szerverről: …”, és a zónák látszanak.
+
+T54 – Drift nélküli futás (1 futás)
+  Lépések: menj végig a pályán lassan, egyenesen, drift nélkül (START → FINISH).
+  Elvárt: 0 pont (a Stílus is 0; eddig 5 pont volt).
+
+=== B BLOKK – MÁSODIK ALKALOM (kb. 1,5 óra) ===
+
+T15 – Harmadik egykerekes = nullás kör (1 futás)
+  Lépések: egy futásban 3 különböző helyen (vagy 3 külön alkalommal) tegyél ki egy kereket.
+  Közben mindig vidd vissza mind a 4 kereket legalább fél másodpercre.
+  Elvárt: 3 db „Pályaelhagyás – 1 kerék”, NULLÁS KÖR („3 egykerekes pályaelhagyás”).
+
+T16 – IZ belső levágás (1 futás)
+  Lépések: egy IZ zónában vágd le a belső ívet úgy, hogy egy első kerék a belső vonalon
+  belülre kerüljön.
+  Elvárt: „Pályaelhagyás – 1 kerék (IZ … vonalán túl)”.
+
+T17 – Fű / murva (1 futás)
+  Lépések: egy zónán kívüli szakaszon (de a JUDGING és FINISH között) tedd ki egy kereket a
+  fűre vagy murvára.
+  Elvárt: „Pályaelhagyás – 1 kerék (fű/murva)”. Ha a pálya szélén van beton / rázókő, arra
+  NEM szabad jeleznie – ezt is próbáld ki, ha van ilyen hely.
+
+T18 – Fal: flow és fal utáni mentés (2 futás)
+  Lépések: a) a falas zónában húzd végig a hátulját a falon, javítás nélkül;
+  b) üsd meg a falat, és rögtön korrigálj (mentsd meg a driftet).
+  Elvárt: a) „Falérintés (flow)”, nincs levonás, a falas zóna Line értéke magas;
+  b) „Fal utáni mentés” (NEM korrekció).
+  Írd fel: a falas zóna pontja reális-e a távolsághoz képest (4 cm-en belül = 100%).
+
+T19 – Touch and go (2 futás)
+  Lépések: a) a TNG zónában az első kerékkel menj nagyon közel (szinte érintsd) a vonalat;
+  b) maradj kb. 1 m-re tőle.
+  Elvárt: a) Line kb. 100% (0,3 m-en belül); b) kb. 33% (0,8–1,5 m között).
+  Az Eredmény → Pályatérkép és zóna részletei mutatja a „Legkisebb távolság”-ot.
+
+T20 – Megállás (1 futás)
+  Lépések: a bírálat alatt állj meg (vagy fulladj le) kb. 1 másodpercre, majd menj tovább.
+  Elvárt: „Megállás / beforgás”, NULLÁS KÖR.
+
+T21 – Futás újraindítása és megszakítása (3 próba)
+  Lépések: a) menj át a START-on, majd legalább 2 mp múlva (még a JUDGING előtt) menj át
+     rajta újra (pl. tolass vissza, vagy fordulj meg);
+  b) futás közben rakd vissza az autót (reset / boxba ugrás);
+  c) futás közben nyomd meg a „Futás lezárása most” gombot.
+  Elvárt: a) „Futás újraindult”; b) „Futás megszakítva: Az autó vissza lett rakva…”,
+  nem ment eredményt; c) eredmény az addigi részből.
+
+T22 – Újrapontozás beállítás-változással (futás nélkül, 5 perc)
+  Lépések: Futások fül → a T07 egyik futásánál „Megnyitás”, írd fel a pontot. Beállítások →
+  Célszög 65°. Futások → ugyanannál „Újrapontozás”. Utána állítsd vissza a Célszöget.
+  Elvárt: az újrapontozott eredmény Angle értékei magasabbak, a pont nagyobb; a fejlécen
+  „(újrapontozva)” látszik.
+
+T23 – Bírói összevetés (a legfontosabb a pontozás hangolásához) (10 futás)
+  Lépések: 2 bíró nézi élőben vagy felvételről ugyanazt a 10 futást (lehetőleg különböző
+  pilóták, jó és gyengébb futások vegyesen). A bírók a program eredményének megnézése ELŐTT
+  írják fel: 0–100 pont, és zónánként egy szó (jó / közepes / gyenge).
+  Elvárt: a program sorrendje nagyjából egyezik a bírókéval.
+  Írd fel: futás ideje, pilóta, bíró1 pont, bíró2 pont, program pontja.
+
+=== C BLOKK – HA VAN IDŐ ===
+
+T24 – Új pályaterv másik pályán (30 perc + 3 futás)
+  Lépések: egy másik pályán (amit versenyen használnátok) készíts pályatervet a 2. pont
+  szerint, csak a súgó és a Teendők alapján. Utána 3 futás.
+  Írd fel: hol akadtál el, mit kellett kitalálni, mennyi ideig tartott.
+
+T25 – Másik autó (3 futás)
+  Lépések: ugyanaz a pálya, egy másik drift autóval (más kormányzárral).
+  Elvárt: a korrekciók és a szög ugyanúgy működnek.
+
+T26 – HATÁR vonal (1 futás)
+  Lépések: két zóna között, ahol nincs zónavonal, rajzolj egy HATÁR vonalat a pálya szélére
+  (piros jelek a pálya felé), és tedd ki rajta túl egy kereket.
+  Elvárt: „Pályaelhagyás – 1 kerék (határ: …)”.
+
+T27 – No-go terület (1 futás)
+  Lépések: egy OZ-hoz rajzolj no-go területet (pl. a zóna egy részén belül), és menj át rajta.
+  Elvárt: az Eredmény → Zónák kártyán „No-go −…”, a Line kevesebb.
+
+T28 – Szabad felvétel (1 felvétel)
+  Lépések: Élő fül → „Szabad felvétel indítása” → menj 1–2 kört → „leállítása”.
+  Elvárt: a Futások fülön „szabad felvétel” sor; „Megnyitás”-ra kiértékeli.
+
+T29 – Online szerveren (2 pilóta + 1 néző gép) – a 2. fázis előkészítése
+  Lépések: a saját szerveretekre mindhárom gép felmegy, mindegyiken fent az app.
+  a) a pilóták a saját gépükön mennek futásokat (ahogy eddig);
+  b) a NÉZŐ gépen: Beállítások → „Figyelt autó” = „A kamerával követett autó”, és a kamerát
+     az egyik pilótára állítva nézze végig a futását.
+  Elvárt: a) ugyanúgy működik, mint egyedül; b) a Teendőkben figyelmeztet, hogy távoli autó;
+  a szög és a zónák működnek, a pályaelhagyás / ütközés pontatlan lehet.
+  Írd fel: a pilóta és a néző gép eredménye mennyire tér el ugyanarra a futásra (mindkét
+  gépről küldjétek el a futásfájlt).
+
+T30 – Teljesítmény (5 perc)
+  Lépések: nézd meg az FPS-t (pl. CM vagy CSP FPS-számláló) az app ablakai nélkül, majd a fő
+  ablakkal és a HUD-dal nyitva, futás közben.
+  Írd fel: a két FPS értéket és a géped (processzor, videókártya) típusát.
+
+
+5. MIT KÜLDJETEK VISSZA
+-----------------------
+  • A kitöltött tesztjegyzőkönyvet (7. pont) – teszt száma, futás ideje, mi történt.
+  • A futásfájlokat: Dokumentumok\Assetto Corsa\CHT Drift Judge\runs\<pálya>\
+    (egy fájl = egy futás teljes telemetriával és a pályatervvel). Bátran küldjétek az
+    egész mappát zipben.
+  • A pályaterv fájlját: ...\CHT Drift Judge\layouts\<pálya>\ (a T10 utáni javítottat is).
+  • A settings.json-t: ...\CHT Drift Judge\settings.json (ebből látom, mi volt átállítva).
+  • Képernyőképet vagy rövid videót, ha valami furcsa (a kezelőfelületről is).
+  • Hiba esetén a CSP naplóját: Dokumentumok\Assetto Corsa\logs\custom_shaders_patch.log
+  • Összeomlásnál a crash-zipet (ahogy most is) – abban van a log.txt, amiből a hiba kiderül.
+  • A „Zóna a festésből” teszteknél a debug mappát: ...\CHT Drift Judge\debug\ (festes_proba_*.png –
+    a felülnézeti képek próbái, festes_kepernyo.png – a képernyőkép, festes_utolso.json – mindig az
+    utolsó felismerés). A mappa a Beállítások → Adatmappák → „Debug” gombbal nyílik meg.
+
+Ezekből a fájlokból offline pontosan újra tudom játszani a futást, és be tudom állítani
+a küszöböket, a pontozási arányt és a zónák távolságait.
+
+
+6. ALAPBEÁLLÍTÁSOK (Beállítások fülön mind állítható, a keresővel megtalálható)
+--------------------------------------------------------------------------------
+  Összpontszám ....................... mindig 100: Line 60 + Angle 20 + Stílus 20 (DM 2025)
+  Zónák .............................. összesen 80 (a súlyuk arányában); zónapont = 75% Line + 25% Angle
+  Stílus ............................. 20: indítás 5, folyamatosság 10, elkötelezettség 5
+  Szög: 100% e fölött ................ 72°   (zónánként felülírható)
+  Szög: 0% e alatt ................... 13°
+  Túldobás ........................... 90° fölött (csak jelzés)
+  Beforgás ........................... 95° fölött 0,25 mp-ig, vagy 8 km/h alatt 0,6 mp-ig → nullás kör
+  Visszarakás a bírálat alatt ........ nullás kör (a JUDGING előtt csak megszakítás)
+  Minimális tempó .................... pályatervenként (alapból nincs); alatta jelzés, levonás 0 pont
+  Fal utáni mentés ................... korrekció a falérintés után 1,2 mp-en belül; külön kategória, 0 pont levonás
+  Line csak drift közben ............. igen (12° fölött)
+  Egykerekes pályaelhagyás ........... −1 pont/db, a 3. nullás kör
+  Kétkerekes pályaelhagyás ........... nullás kör
+  Pályaelhagyás tűrése ............... a kerék közepe 0,15 m-rel a zónavonalon túl; 0,05 mp alatti villanás nem számít
+  Korrekció .......................... 12° szögesés 0,4 mp alatt + visszanövés, vagy 3 kormány-irányváltás 1 mp alatt; jelzés, 0 pont levonás
+  OZ / IZ: 100% / 0% távolság ........ 0,5 m / 3,0 m
+  Falas zóna: 100% / 0% távolság ..... 0,04 m / 2,0 m (falérintés hátul = 0 cm)
+  Touch and go vonalak ............... 0,3 m / 0,8 m / 1,5 m (lépcsős: 100 / 66 / 33 / 0)
+  IC pont: 100% / 0% távolság ........ 0,5 m / 2,5 m (első lökhárító – pont, egyenletesen)
+  Stílus mérése ...................... korai indítás: 15 m-en belül; szögfelvétel 0,6 s (100%) – 2,0 s (0%);
+                                       szögvesztés 3° (100%) – 15° (0%); irányváltás 0,5 s – 1,6 s;
+                                       ingadozás 0° – 12°; gázelvétel az út 3%-a – 20%-a;
+                                       tempótartás (leglassabb 10% / közép) 0,90 – 0,55
+  HUD ................................ új telepítésnél minden modul; előbeállítások: Edzés, Részletes,
+                                       Minimál, Közvetítő
+  Zónák színei ....................... OZ sárga, IZ kék, fal narancs, TNG zöld, IC türkiz, HATÁR lila, pályaelhagyás piros
+  Színes kitöltés .................... be, erősség 0,25 (a piros pályaelhagyás sáv is be)
+  Teendők panel ...................... mindig látszik (elrejthető)
+  Mi látszik a pályán ................ Pilóta: nevek csak a Pálya fülön, minden más mindig;
+                                       Bíró: minden; Közvetítő: csak zónák és színek
+  Zónák súlyozása .................... új tervnél automatikus (hossz^0,5, ív +25%/90°, min. 4 m,
+                                       TNG ×1,8, IC ×1,0); régi tervek kézi
+  Zóna a festésből – kép forrása ..... Automatikus (felülnézeti kép; ha üres / nincs rajta a festés: képernyő)
+  Futás maximális hossza ............. 240 mp
+  Pályarajz .......................... be; ki-be: fő ablak felső sora vagy Ctrl+Shift+Z
+  Gyorsbillentyűk (online) ........... fő ablak Ctrl+Shift+D, HUD Ctrl+Shift+H
+  Bírói levonás ...................... 0 pont (a bíró írja be esetenként)
+  Futások küldése a szerverre ........ be (csak AssettoServeren működik)
+  Stílus drift nélkül ................ 0 pont (5 m-nél kevesebb drift)
+
+
+7. TESZTJEGYZŐKÖNYV (minta – másold ki egy jegyzetbe vagy táblázatba)
+---------------------------------------------------------------------
+Tesztelő neve: ............   Dátum: ............   Pálya: ............   Autó: ............
+Kormány / pedál: ............   App verzió (fejléc): v0.3.8   CSP verzió: ............
+
+Teszt | Futás ideje (Eredmény fül) | Mit csináltam | Mit várt a bíró | Mit mutatott a program | Megjegyzés
+------+----------------------------+---------------+-----------------+------------------------+-----------
+T07   | 21:55:12                   | tiszta futás  | kb. 75 pont     | 68,4, nincs hiba       |
+T08   | 21:58:40                   | OZ 2, 1 kerék kint 6 mp-nél | −1 pont | 1 kerék (OZ 2 vonalán túl), −1 | jó
+...
+
+Kezelőfelület (T01–T04) – szabad szöveg:
+  • Ami nem érthető: ............
+  • Ami nem fér el / rosszul néz ki: ............
+  • Amit nem találtam meg: ............
+  • Ötletek: ............

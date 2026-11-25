@@ -1,0 +1,49 @@
+{
+ "jo_futas": {
+  "final": 51.961,
+  "zeroRun": false,
+  "zoneSum": 37.17,
+  "line": 30.807,
+  "angle": 6.364,
+  "style": 14.791,
+  "zeroReasons": []
+ },
+ "kis_szog": {
+  "final": 36.115,
+  "zeroRun": false,
+  "zoneSum": 20.629,
+  "line": 20.231,
+  "angle": 0.398,
+  "style": 15.486,
+  "zeroReasons": []
+ },
+ "nagy_szog_beforgas": {
+  "final": 0,
+  "zeroRun": true,
+  "zoneSum": 44.374,
+  "line": 32.659,
+  "angle": 11.716,
+  "style": 16.111,
+  "zeroReasons": [
+   "Beforgás"
+  ]
+ },
+ "lassu_gurulas": {
+  "final": 0,
+  "zeroRun": false,
+  "zoneSum": 0,
+  "line": 0,
+  "angle": 0,
+  "style": 0,
+  "zeroReasons": []
+ },
+ "tavol_a_vonaltol": {
+  "final": 41.651,
+  "zeroRun": false,
+  "zoneSum": 26.86,
+  "line": 22.091,
+  "angle": 4.769,
+  "style": 14.791,
+  "zeroReasons": []
+ }
+}

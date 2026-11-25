@@ -1,0 +1,76 @@
+-- CHT Drift Judge – short help topics, found by the global search. Pure Lua.
+
+local help = {}
+
+help.topics = {
+  { title = 'Hogyan készül egy pályaterv?', tab = 'editor',
+    text = 'Pálya fül: 1. adj nevet és ments, 2. tedd le a JUDGING és a FINISH kaput (az autóval a vonalra állva „Az autó helyére”), 3. adj hozzá zónákat és rajzold meg a vonalukat, 4. menj egy tesztkört, és nézd meg a Teendőket.',
+    keywords = 'pályaterv layout új kezdés lépések' },
+  { title = 'Hogyan rakjam le egy zóna pontjait?', tab = 'editor',
+    text = 'Nem kell körbezárni: a zóna egy vonal (külső / belső pályaszél, fal, TNG vonal). Három mód: „Pontok kattintással” (szabad kamera F7), „Pont az autóhoz” (az autó kiválasztott pontjánál), vagy „Nyomkövetés vezetés közben” (lassan végighajtva magától rajzol). Íves vonalhoz 2–3 méterenként legyen pont.',
+    keywords = 'zóna pont lerakás kattintás körbezárni 4 pont vonal rajzolás' },
+  { title = 'Nyomkövetés vezetés közben', tab = 'editor',
+    text = 'Jelöld ki a zónát, válaszd ki az autó pontját (pl. hátsó külső sarok az OZ-hoz), kapcsold be a nyomkövetést, és lassan vezess végig a vonal mentén. A lépésköz állítható. A végén kapcsold ki, és ments.',
+    keywords = 'trace nyomkövetés vezetés közben automatikus' },
+  { title = 'Mi számít pályaelhagyásnak?', tab = 'settings', query = 'pályaelhagyás',
+    text = 'Ha egy kerék közepe a zónák vonalán túl van (OZ külső vonal, IZ belső vonal), fűre / murvára ér, az AC jelzi, vagy egy HATÁR vonalon túl van. 1 kerék = −1 pont (a 3. nullás kör), 2 kerék egyszerre = nullás kör.',
+    keywords = 'pályaelhagyás kerék kint off track határ' },
+  { title = 'Miért nem figyel egy vonalon pályaelhagyást?', tab = 'editor',
+    text = 'Ha egy vonalon az autó közepe is áthalad, az a vonal nem a pálya széle – ilyenkor a rendszer ott kikapcsolja a pályaelhagyást, és a Teendőkben jelzi. Rajzold újra a vonalat pontosan a pálya szélén.',
+    keywords = 'vonal pályaelhagyás kikapcsolva hibás vonal' },
+  { title = 'Hogyan lesz a pontszám 100?', tab = 'settings', query = '100',
+    text = 'A Drift Masters 2025 szabálykönyv szerint: Line 60, Angle 20, Stílus 20. A zónák 80 pontot érnek (a súlyuk arányában), ezen belül a zónapont = 75% Line + 25% Angle; a stílus 20 pontja: indítás 5, folyamatosság 10, elkötelezettség 5. Új pályatervnél a súlyozás automatikus: a hosszabb és jobban kanyarodó zóna többet ér, a TNG szorzóval számol; zónánként saját súly is adható (Pálya fül → 3. Zónák → Súlyozás). Ebből jönnek le a levonások. Az arányok a Beállítások → Pontozási arány részben állíthatók.',
+    keywords = 'pontszám 100 súly súlyozás automatikus hossz arány line angle stílus zónapont 60 20 dm drift masters' },
+  { title = 'Stílus: indítás, folyamatosság, elkötelezettség', tab = 'settings', query = 'stílus',
+    text = 'Indítás (5): korai indítás (már a JUDGING vonalon driftel), gyors szögfelvétel (a célszög 80%-áig), szögvesztés nélkül. Folyamatosság (10): gyors irányváltás, lock to lock (nagy szög a váltás két oldalán), egyenletes szög (flow). Elkötelezettség (5): gázadás (nincs gázelvétel driftben), tempótartás (nem ragad be), és ha a pályatervben meg van adva, a minimális tempó. A korrekciót, túldobást és falérintést a bírók vonják le, ezért a stílusba nem számít bele.',
+    keywords = 'stílus style indítás folyamatosság elkötelezettség initiation fluidity commitment gáz tempó lock' },
+  { title = 'Minimális tempó', tab = 'editor',
+    text = 'Pálya fül → 5. Minimális tempó. A futás átlagsebessége (JUDGING–FINISH, út szerint) a minimumon 0%, a teljes pont tempón 100% az Elkötelezettségben; a minimum alatt a futás jelzést kap. Egy jó referencia-futás után az Eredmény fül → Futás adatai → „Ez legyen a pálya referencia-tempója” gombbal is beállítható (átlag = teljes pont, 90% = minimum).',
+    keywords = 'tempó sebesség minimum minimális lassú referencia' },
+  { title = 'Zónák súlyozása (melyik zóna mennyit ér)', tab = 'editor',
+    text = 'Pálya fül → 3. Zónák → „Súlyozás”. Automatikus: súly = típusszorzó × hossz^0,5 × (1 + 0,25 × ív / 90°), a 4 m-nél rövidebb zóna 4 m-nek számít. A „Saját” pipával egy zóna fix súlyt kap, a többi automatikus marad. „Kézi” módban minden zóna súlyát te adod meg (átváltáskor a mostani arányok maradnak). A képlet a Beállítások → Zónák automatikus súlyozása részben hangolható.',
+    keywords = 'súly súlyozás automatikus kézi hosszabb zóna többet ér saját súly' },
+  { title = 'Korrekció és fal utáni mentés', tab = 'settings', query = 'korrekció',
+    text = 'Korrekció: gyors szögesés, majd visszanövés, vagy legyezés (sok kormány-irányváltás). Fal utáni mentés: ugyanez falérintés után – külön kategória. Mindkettő alapból csak jelzés.',
+    keywords = 'korrekció legyezés fal mentés' },
+  { title = 'Futásfájlok küldése hangoláshoz', tab = 'runs',
+    text = 'Futások fül → „Mappa megnyitása”. A .json fájlokban benne van a teljes telemetria és a pályaterv, ezekből offline is újra tudunk pontozni.',
+    keywords = 'futás fájl küldés mappa telemetria' },
+  { title = 'HUD testreszabása', tab = 'settings', query = 'hud',
+    text = 'A HUD ablak fogaskerék gombjával vagy a Beállítások → HUD modulok résznél: modulok ki-be, Fel / Le sorrend, előbeállítások (Edzés, Részletes, Minimál, Közvetítő), méret és háttér. Az Edzés előbeállítás az élő adatokat és a futás összesítőjét (pont Line / Angle / Stílus bontásban, hibák) mutatja.',
+    keywords = 'hud modul sorrend méret közvetítő' },
+  { title = 'Zóna automatikusan a festésből', tab = 'editor',
+    text = 'Pálya fül → 3. Zónák → „Zóna a festésből”. Állj az autóval a festett zóna mellé (ne takarja a festést), válaszd ki a típust, állítsd a kamerát (F7) felülről a zóna fölé, nyomd meg az Indítást, és kattints a keret belsejébe. A keretnek nem kell zártnak lennie: ha egy oldala hiányzik vagy kopott, a vonalvégek között lezárja (narancs vonal). Kép forrása: Automatikus (felülnézeti kép, ha üres: a képernyő), Felülnézeti kép, vagy Képernyő (amit látsz). Előnézet után „Elfogadás”.',
+    keywords = 'automatikus festés szín felismerés lerakás méret festett zóna nyitott keret hézag képernyő felülnézet forrás' },
+  { title = 'IC – belső érintési pont', tab = 'editor',
+    text = 'Új zóna: „+ IC”. Egy pont, ahová az első lökhárítónak a legközelebb kell érnie (belső clip). Pontozás: a lökhárító legkisebb távolsága a ponttól – a „Teljes pont sugara” (alap 0,5 m) alatt 100%, a „Zóna sugara” (alap 2,5 m) felett 0%, közte egyenletesen. Lerakás: kattintással, „Pont az autóhoz” (belső első sarok), vagy a festésből (a festett jelre kattintva). Újra lerakva áthelyeződik; a Méret és helyzet részben centiméterre is mozgatható.',
+    keywords = 'ic clip clipping belső érintési pont inner pont lökhárító' },
+  { title = 'Értékek beírása csúszka helyett', tab = 'editor',
+    text = 'A Méret és helyzet részben (és a Beállításokban) minden csúszka mellett van egy mező: kattints bele, írd be a pontos értéket (tizedesvessző is jó), és nyomd meg az Entert. A zóna hosszát, a végek hosszabbítását és az eltolást is be lehet írni.',
+    keywords = 'beírás kézzel szám érték pontos csúszka mező enter' },
+  { title = 'Adatmappák (futások, pályatervek, debug)', tab = 'settings', query = 'mappa',
+    text = 'Beállítások → „Adatmappák”: egy gombbal megnyitja a fő mappát, az adott pálya pályaterveit és futásait, az összes futást, a debug mappát (festésfelismerés képei) és a beállítások fájlt. A Futások fülön és a Pálya fülön is van mappagomb.',
+    keywords = 'mappa megnyitás fájl futások pályatervek debug beállítások küldés' },
+  { title = 'Zóna méretének utólagos állítása', tab = 'editor',
+    text = 'Jelöld ki a zónát → „Méret és helyzet”: szélesség (0% és 100% távolság, TNG vonalak – arányosan is), pályaelhagyás ennél a zónánál (ki-be, és hol kezdődik a vonaltól), eleje / vége rövidítése-hosszabbítása, eltolás oldalra, pont mozgatása / beszúrása / törlése egérrel.',
+    keywords = 'méret szélesség hossz eltolás mozgatás pont zóna utólag pályaelhagyás kezdete piros sáv tng arányos' },
+  { title = 'Mi látszik a pályán (zónanevek, vonalak, színek)?', tab = 'settings', query = 'látszódjon',
+    text = 'Beállítások → „Mi látszódjon a pályán”: minden elemnél (zónanevek, zónavonalak, színes kitöltés, piros pályaelhagyás sáv, kapuk, nyomvonal, lefedettség) választható: Mindig / Csak a Pálya fülön / Soha – külön a Pilóta, a Bíró és a Közvetítő szerephez. Pilótánál alapból a zónanevek csak szerkesztéskor (a Pálya fülön) látszanak.',
+    keywords = 'zóna név nevek felirat látszik elrejtés szerkesztő mód bíró közvetítő pilóta szerep' },
+  { title = 'Zónák színei és a pályaelhagyás sáv', tab = 'settings', query = 'szín',
+    text = 'A zónák átlátszó színnel kitöltve látszanak a pályán (OZ sárga, IZ kék, fal narancs, TNG zöld, IC türkiz kör); a pályahatár vonalakon túl piros sáv mutatja, hol számít pályaelhagyásnak. Színek: Beállítások → Zónák színei; mikor látszik: Beállítások → Mi látszódjon a pályán.',
+    keywords = 'szín kitöltés átlátszó piros sárga pályaelhagyás sáv' },
+  { title = 'Teendő jóváhagyása vagy a panel elrejtése', tab = 'live',
+    text = 'Ha egy figyelmeztetés nálatok nem hiba (pl. egyenes vonal 2 ponttal), nyomd meg a „Rendben, így jó” gombot: a pályatervbe mentődik, és amíg a vonal nem változik, nem szól. A panel elrejthető (Mindig / Csak ha HIBA van / Elrejtve), a felső sorban akkor is látszik a szám.',
+    keywords = 'teendők jóváhagyás elrejtés eltüntetés rendben' },
+}
+
+function help.search(query, textMatches)
+  local r = {}
+  for _, t in ipairs(help.topics) do
+    if textMatches(t.title .. ' ' .. t.text .. ' ' .. (t.keywords or ''), query) then r[#r + 1] = t end
+  end
+  return r
+end
+
+return help
