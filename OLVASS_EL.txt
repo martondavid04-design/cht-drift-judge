@@ -1,9 +1,10 @@
-CHT DRIFT JUDGE – 0.3.8 (1. fázis: solo / kvalifikáció)
+CHT DRIFT JUDGE – 0.3.9 (1. fázis: solo / kvalifikáció)
 CornerHuntersTeam drift bírói rendszer Assetto Corsához
 =====================================================================
 
 TARTALOM
-  0. Új a 0.3.8-ban (a program a szerverről is jön – nem kell telepíteni; pályarajz ki-be egy
+  0. Új a 0.3.9-ben (a tesztadatok automatikusan a fejlesztő Google-táblázatába mennek; a
+     szerveradminok bíróként látják a pontokat), a 0.3.8-ban (a program a szerverről is jön – nem kell telepíteni; pályarajz ki-be egy
      gombbal; bírói levonás; a pilóták futásai a bíróknál), a 0.3.7-ben (a válaszok szerinti pontozás: Line 60 / Angle 20 / Stílus 20, 72°, 13°, 95°,
      minimális tempó, visszarakás = nullás; festésfelismerés javítása, IC pont, beírható értékek,
      mappák, kipörgés, Edzés HUD), a 0.3.6-ban, a 0.3.5-ben és a 0.3.4-ben, javítás a 0.3.3-ban és
@@ -11,14 +12,35 @@ TARTALOM
   1. Telepítés
   2. Pályaterv készítése
   3. Futás és eredmény
-  4. TESZTELÉSI TERV – pontos lépések (T01–T54)
+  4. TESZTELÉSI TERV – pontos lépések (T01–T57)
   5. Mit küldjetek vissza
   6. Alapbeállítások
   7. Tesztjegyzőkönyv (kitöltendő minta)
 
 
-0. ÚJ A 0.3.8-BAN
+0. ÚJ A 0.3.9-BEN
 -----------------
+  • A TESZTADATOK MAGUKTÓL MENNEK (nem kell fájlokat küldeni): a program minden gépen – a
+    szerverről kapott és a telepített változat is – az interneten keresztül elküldi a fejlesztő
+    Google-táblázatába („CHT Drift Judge – tesztadatok”):
+      – belépéskor: a program és a CSP verzióját, és hogy a CSP mit tud (Steam ID, admin, egér…);
+      – minden futás végén: az eredményt (pont, Line / Angle / Stílus, hibák) és a TELJES
+        felvételt (telemetria) – a megszakított futást és a szabad felvételt is;
+      – a program hibáit és a festésfelismerés adatait.
+    A szerver ehhez nem kell (a gép maga küldi), a játékot nem lassítja, és ha nincs internet,
+    később újrapróbálja. Személyes adatot nem küld: csak a játékbeli nevet, az autót, a pályát és
+    a futás adatait. Állapot: Beállítások → „Tesztadatok küldése (Google táblázat)” (elküldve /
+    vár / hiba). A telepített változatban ugyanott kikapcsolható; a szerverről kapottnál a szerver
+    beállítása dönt (upload = 0 kikapcsolja).
+  • A SZERVERADMIN BÍRÓKÉNT LÁTJA A PONTOKAT: ha a szerveren csak a bírók látják a pontot
+    (pilotScores = 0), akkor eddig a Steam ID kellett volna hozzá – ezt viszont nem minden CSP adja
+    meg. Mostantól aki a szerveren admin (a panel Admins listájában van a Steam ID-ja, vagy a
+    chatben „/admin <jelszó>”), az bíróként látja a pontokat. A Beállítások → „Online változat és
+    szerver” → „Szerep a szervertől” sor mutatja.
+
+
+ÚJ A 0.3.8-BAN
+--------------
   • A PROGRAM A SZERVERRŐL IS JÖN (A08, E02): a PrikezsiaGang szerver minden belépőnek
     automatikusan elküldi a programot, NEM KELL TELEPÍTENI. A szerver mindig a legfrissebb
     verziót küldi (GitHub: github.com/martondavid04-design/cht-drift-judge). Megnyitás a
@@ -316,7 +338,7 @@ Content Manager ajánlott.
 
 A játékban a jobb oldali app-sávban két ablak jelenik meg:
   • CHT Drift Judge – a fő ablak (Élő, Eredmény, Futások, Pálya, Beállítások fülek).
-    A fejlécében látszik a verzió: v0.3.8 – ha nem ezt látod, a régi verzió fut.
+    A fejlécében látszik a verzió: v0.3.9 – ha nem ezt látod, a régi verzió fut.
   • CHT Drift HUD   – részletes kijelző: szög középről (bal / jobb), sebesség, fokozat,
     fordulatszám, kormányállás, gáz, fék, kézifék, kuplung, hajtás (van / nincs) és
     kerékkipörgés, zóna, hibák, utolsó pont. A HUD ablak fejlécében lévő fogaskerékkel
@@ -458,8 +480,8 @@ fejlécén látszik, kész-e. Ami hiányzik vagy hibás, az a Teendők panelen i
 4. TESZTELÉSI TERV – PONTOS LÉPÉSEK
 -----------------------------------
 ELŐKÉSZÜLETEK (minden tesztelőnél, egyszer):
-  1. Telepítsd a 0.3.8-at, és nézd meg, hogy a fő ablak fejlécében v0.3.8 látszik (a szerveren a
-     szerverről kapott változat fejlécében „v0.3.8 · online”).
+  1. Telepítsd a 0.3.9-et, és nézd meg, hogy a fő ablak fejlécében v0.3.9 látszik (a szerveren a
+     szerverről kapott változat fejlécében „v0.3.9 · online”).
   2. Beállítások fül → ha a fül neve „Beállítások (… mód.)”, nyomd meg a „Mind vissza
      alapra” gombot (és utána az „Igen, mind vissza alapra”-t). Így mindenki ugyanazzal a
      beállítással tesztel, és az eredmények összevethetők. Ha egy teszt kifejezetten
@@ -740,7 +762,7 @@ T50 – A program a szerverről (10 perc, a PrikezsiaGang szerveren)
   ablakot a tetejénél, méretezd a jobb alsó sarkánál; nyitott fő ablaknál mozgasd a HUD-ot is.
   Beállítások → „Online változat és szerver” szekció. Ha a chat appban van „CHT Drift Judge”
   bejegyzés, próbáld ki.
-  Elvárt: belépéskor az üzenet a gyorsbillentyűkkel; a fejlécben „v0.3.8 · online”; az ablakok
+  Elvárt: belépéskor az üzenet a gyorsbillentyűkkel; a fejlécben „v0.3.9 · online”; az ablakok
   megnyílnak, mozgathatók; kilépés és újbóli belépés után ugyanott vannak.
   Írd fel: a CSP verziót; mit mutat az „Online változat és szerver” szekció minden sora (főleg a
   Steam ID és az „Üzenetek a szerveren” sor); hiba esetén a custom_shaders_patch.log-ot.
@@ -767,6 +789,26 @@ T53 – Pályaterv a szerverre (10 perc)
 T54 – Drift nélküli futás (1 futás)
   Lépések: menj végig a pályán lassan, egyenesen, drift nélkül (START → FINISH).
   Elvárt: 0 pont (a Stílus is 0; eddig 5 pont volt).
+
+=== A6 BLOKK – A 0.3.9 ÚJDONSÁGAI (kb. 20 perc) ===
+
+T55 – Tesztadatok küldése (5 perc, bármelyik változat)
+  Lépések: indítsd el a játékot (vagy lépj be a szerverre), várj 10 másodpercet, menj 2 futást
+  (1 legyen nullás). Beállítások → „Tesztadatok küldése (Google táblázat)”.
+  Elvárt: Állapot: bekapcsolva; „Elküldve” 3 (belépés + 2 futás), „Küldésre vár” nincs, hiba nincs.
+  Írd fel: ha hiba van, az „Utolsó hiba” sort szó szerint.
+
+T56 – Internet nélkül (5 perc, telepített változat)
+  Lépések: húzd ki a hálózatot (vagy kapcsold ki a wifit), menj 1 futást, nézd meg a Beállításokban
+  a „Küldésre vár” sort; kapcsold vissza az internetet, várj 1–2 percet.
+  Elvárt: internet nélkül „Küldésre vár: 1 tétel”, a játék nem akad; visszakapcsolás után elmegy
+  (ha 4 próbálkozás alatt nem sikerül, „Nem sikerült” lesz belőle – ezt írd fel).
+
+T57 – Admin = bíró (5 perc, a szerveren, ha a pilotScores = 0)
+  Lépések: lépj be a szerverre adminként (a Steam ID-d a panel Admins listájában van), és egy
+  másik gépen pilótaként. Beállítások → „Online változat és szerver” → „Szerep a szervertől”.
+  Elvárt: az admin gépén „Szerveradmin – bíróként látja a pontokat”, és látja a pontot; a pilóta
+  gépén „Pilóta”, és nem látja.
 
 === B BLOKK – MÁSODIK ALKALOM (kb. 1,5 óra) ===
 
@@ -929,7 +971,7 @@ a küszöböket, a pontozási arányt és a zónák távolságait.
 7. TESZTJEGYZŐKÖNYV (minta – másold ki egy jegyzetbe vagy táblázatba)
 ---------------------------------------------------------------------
 Tesztelő neve: ............   Dátum: ............   Pálya: ............   Autó: ............
-Kormány / pedál: ............   App verzió (fejléc): v0.3.8   CSP verzió: ............
+Kormány / pedál: ............   App verzió (fejléc): v0.3.9   CSP verzió: ............
 
 Teszt | Futás ideje (Eredmény fül) | Mit csináltam | Mit várt a bíró | Mit mutatott a program | Megjegyzés
 ------+----------------------------+---------------+-----------------+------------------------+-----------

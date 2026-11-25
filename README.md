@@ -28,6 +28,18 @@ broadcasters = ''
 | `judges`, `broadcasters` | Steam64 azonosítók vesszővel elválasztva (szerep a szervertől) |
 | `sendResults` | 1 (alap) = a befejezett futások eredménye mindenkihez elmegy (a bírók gyűjtik) |
 | `base` | ha a fájlok máshol vannak: a repó raw címe `/`-rel a végén |
+| `upload` | 1 (alap) = a tesztadatok (belépés, futások a felvétellel, hibák) a fejlesztő Google-táblázatába mennek; 0 = ki |
+| `uploadUrl` | ha a tesztadatok máshova menjenek (üres = a beépített cím) |
+
+A szerver adminjai (panel → Admins: Steam ID-k) bíróként látják a pontokat akkor is, ha
+`pilotScores = 0`.
+
+## Tesztadatok
+
+A program (`src/upload.lua`) minden gépről HTTPS-en küldi a tesztadatokat egy Google Apps Script
+webappnak, ami egy Google-táblázatba írja őket (lapok: Futások, Telemetria, Belépések, Debug). A
+fogadó script: `tools/gsheet_collector.gs` (a közzétett változatban van az olvasó kulcs, itt nincs).
+A programban lévő írókulccsal csak sort lehet hozzáadni, olvasni nem.
 
 A játékban: **Ctrl+Shift+D** fő ablak, **Ctrl+Shift+H** HUD, **Ctrl+Shift+Z** pályarajz ki-be.
 A szerverről kapott változat nem ment fájlt (a CSP nem engedi); a beállítások és a pályaterv a CSP

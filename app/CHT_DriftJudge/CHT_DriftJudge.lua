@@ -3,7 +3,7 @@
 -- The same code runs as an installed Lua app (apps/lua/CHT_DriftJudge) and as an online script that the
 -- server sends to every player (one bundled file from GitHub, see tools/build.py and src/platform.lua).
 
-local APP_VERSION = '0.3.8'
+local APP_VERSION = '0.3.9'
 
 local config = require('src/config')
 local layoutMod = require('src/layout')
@@ -24,6 +24,7 @@ local visibility = require('src/visibility')
 local platform = require('src/platform')
 local controls = require('src/controls')
 local netsync = require('src/netsync')
+local upload = require('src/upload')
 
 local app = {
   version = APP_VERSION,
@@ -37,6 +38,7 @@ local app = {
 }
 app.platform = platform
 app.netsync = netsync
+app.upload = upload
 app.cfg = config.merge(app.settings.scoring)
 if visibility.migrate(app.settings) then storage.saveSettings(app.settings) end
 
@@ -266,9 +268,11 @@ local function saveRecord(rows, result, tag)
     layoutName = app.layout.name, layoutHash = layoutMod.hash(app.layout, layoutText), layout = layoutCopy,
     scoring = app.cfg, fields = telemetry.fields, samples = rows, result = result,
   }
+  upload.run(record) -- test data to the Google Sheet (if switched on)
   storage.saveRun(record, function(err, path)
     if err then
       status('Mentési hiba: ' .. tostring(err), U.col.red)
+      upload.debug('error', 'futás mentése', err)
       return
     end
     local file = path:match('[^/\\]+$')
@@ -405,6 +409,7 @@ end
 editor.init(app)
 telemetry.watchJumps(0)
 netsync.init(app)
+upload.init(app)
 if rawget(_G, '__STUB') then _G.__CHT_APP = app end -- offline smoke tests only
 
 -- Online: layouts come from the server's GitHub folder ------------------------------------------------
@@ -491,6 +496,8 @@ local function updateFrame(dt)
   updatePassive()
   if app.passive then return end
   hotkeys()
+  platform.updateAdmin()
+  upload.update()
   if statusUntil > 0 and now() > statusUntil then app.statusMessage, statusUntil = nil, 0 end
   if sim.isReplayActive or sim.isPaused or sim.dt <= 0 then return end
   local car = app.car()
@@ -521,6 +528,7 @@ local function updateFrame(dt)
   if not ok then
     ac.error('CHT Drift Judge hiba:', ev)
     status('Belső hiba a pontozásban: ' .. tostring(ev), U.col.red, 15)
+    upload.debug('error', 'pontozás', ev, { layout = app.layout and app.layout.name, t = s and s.t, zones = app.layout and #app.layout.zones })
     app.judge:reset()
     recorder:stop()
   elseif ev then
@@ -547,6 +555,7 @@ if platform.online then
       updateErrors = updateErrors + 1
       ac.error('CHT Drift Judge (frissítés):', err)
       status('Belső hiba: ' .. tostring(err), U.col.red, 15)
+      pcall(upload.debug, 'error', 'frissítés', err)
     end
   end
 else
@@ -602,6 +611,7 @@ if platform.online then
     if not ok then
       drawErrors = drawErrors + 1
       ac.error('CHT Drift Judge (rajz):', err)
+      pcall(upload.debug, 'error', 'pályarajz', err)
     end
   end
 else
@@ -1012,6 +1022,7 @@ if platform.online then
       uiErrors = uiErrors + 1
       ac.error('CHT Drift Judge (ablak):', err)
       status('Hiba az ablak rajzolásában: ' .. tostring(err), U.col.red, 15)
+      pcall(upload.debug, 'error', 'ablak', err)
     end
   end
 end

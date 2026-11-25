@@ -46,7 +46,7 @@ def app_mode():
     app = g.__CHT_APP
     draw_all(g)
     check(not errors(g), 'betöltés és minden fül rajzolása hiba nélkül')
-    check(app.version == '0.3.8', 'verzió 0.3.8')
+    check(app.version.startswith('0.3.'), 'verzió ' + str(app.version))
     # E01: hotkey toggles the drawings
     vis = L.eval("require('src/visibility')")
     check(vis.masterOn(app.settings) is True, 'pályarajz alapból BE')

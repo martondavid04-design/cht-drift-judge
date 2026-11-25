@@ -296,6 +296,14 @@ function ac.GeometryShot()
 end
 function ac.makeSimpleScreenshot(fmt, cb) if cb then cb('stub: no screenshot', nil) end end
 if STUB_STEAM_ID then function ac.getUserSteamID() return STUB_STEAM_ID end end
+-- admin flag: ac.checkAdminPrivileges() refreshes sim.isAdmin (STUB.makeAdmin = what the server says)
+STUB.adminChecks = 0
+STUB.sim.isAdmin = false
+function ac.checkAdminPrivileges()
+  STUB.adminChecks = STUB.adminChecks + 1
+  STUB.sim.isAdmin = STUB.makeAdmin == true
+  return true
+end
 
 -- online-script only APIs
 if __STUB_ONLINE then
@@ -337,6 +345,22 @@ function web.get(url, headers, cb)
     if body then cb(nil, { status = 200, body = body, headers = {} })
     else cb(nil, { status = 404, body = '404: Not Found', headers = {} }) end
   end
+end
+
+-- web.post: STUB.webPostMode = 'ok' | 'redirect' | 'error' | 'throw' | 'deferred' | 'badkey' | 'html'
+STUB.webPosts = {}
+STUB.webPostMode = 'ok'
+function web.post(url, headers, data, cb)
+  local p = { url = url, headers = headers, body = data, cb = cb }
+  STUB.webPosts[#STUB.webPosts + 1] = p
+  local m = STUB.webPostMode
+  if m == 'deferred' then return end
+  if m == 'throw' then error('only two requests can run at once') end
+  if m == 'error' then cb('connection failed', nil) return end
+  if m == 'redirect' then cb(nil, { status = 302, body = '<HTML>Moved Temporarily</HTML>', headers = {} }) return end
+  if m == 'badkey' then cb(nil, { status = 200, body = '{"ok":false,"error":"key"}', headers = {} }) return end
+  if m == 'html' then cb(nil, { status = 200, body = '<html>Hiba</html>', headers = {} }) return end
+  cb(nil, { status = 200, body = '{"ok":true}', headers = {} })
 end
 
 -- online messages: every send is delivered back to the local callbacks too (like CSP does)

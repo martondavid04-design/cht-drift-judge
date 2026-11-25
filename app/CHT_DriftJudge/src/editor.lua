@@ -244,7 +244,7 @@ local function isIC(t) return t == 'IC' end
 local function writePaintDebug()
   pcall(function()
     local r, ch = paint.result, paint.choice
-    storage.writeJSON(storage.debugDir() .. '/festes_utolso.json', {
+    local data = {
       appVersion = app.version, csp = ac.getPatchVersion and ac.getPatchVersion() or nil, track = ac.getTrackFullID('/'),
       seed = paint.seed and { x = paint.seed.x, y = paint.seed.y, z = paint.seed.z }, type = paint.type, tol = paint.tol,
       status = paint.status, error = paint.err, shotError = paint.shotErr, errorInfo = paint.errInfo,
@@ -253,7 +253,13 @@ local function writePaintDebug()
         mode = r.mode, length = r.length, width = r.width, thin = r.thin, pixels = r.pixels, color = r.color,
         paintBounded = r.paintBounded, freeEnds = r.freeEnds, walls = r.walls, mid = r.mid, left = r.left, right = r.right }) or nil,
       choice = ch and { edge = ch.edge, side = ch.side, zeroDist = ch.zeroDist, points = ch.simple } or nil,
-    }, true)
+    }
+    storage.writeJSON(storage.debugDir() .. '/festes_utolso.json', data, true)
+    -- the same data to the test sheet (Debug lap), so the paint detection can be checked from there
+    if app.upload then
+      app.upload.debug(paint.status == 'error' and 'warn' or 'info', 'festésfelismerés',
+        tostring(paint.status) .. (paint.err and (': ' .. tostring(paint.err)) or ''), data)
+    end
   end)
 end
 

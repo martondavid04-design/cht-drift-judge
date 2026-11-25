@@ -24,6 +24,8 @@ local defaults = {
   pilotScores = 1,           -- 1 = pilots see their own points; 0 = only judges and broadcasters
   sendResults = 1,           -- 1 = finished runs are sent to everyone (the judges collect them)
   showWelcome = 1,           -- 1 = a short message on joining (how to open the program)
+  upload = 1,                -- 1 = test data (runs, errors) go to the Google Sheet (src/upload.lua)
+  uploadUrl = '',            -- other receiving address for the test data ('' = the built-in one)
 }
 P.server = {}
 for k, v in pairs(defaults) do P.server[k] = v end
@@ -54,13 +56,33 @@ local function idList(s)
   return r
 end
 
--- Role given by the server (online): 'judge' | 'streamer' | nil (= not on a list, or no Steam ID).
+-- Server admin? (AssettoServer: Steam IDs in the panel's Admins list are admins as soon as they join;
+-- anyone else after „/admin <password>” in the chat.) CSP refreshes the flag on ac.checkAdminPrivileges().
+function P.isAdmin()
+  local ok, sim = pcall(ac.getSim)
+  return ok and sim ~= nil and sim.isAdmin == true
+end
+
+P.adminCheckAt = 3                -- os.clock() of the next admin check
+function P.updateAdmin()
+  if not P.online or type(ac.checkAdminPrivileges) ~= 'function' then return end
+  local t = os.clock()
+  if t < P.adminCheckAt then return end
+  P.adminCheckAt = t + (P.isAdmin() and 300 or 60)
+  pcall(ac.checkAdminPrivileges)
+end
+
+-- Role given by the server (online): 'judge' | 'streamer' | 'admin' | nil (= pilot).
+-- The Steam ID lists (judges / broadcasters) count only if this CSP version tells the Steam ID; the
+-- reliable way is the server's admin list: every admin (judges, broadcaster PCs) sees the points.
 function P.serverRole()
   if not P.online then return nil end
   local me = P.steamID()
-  if not me then return nil end
-  if idList(P.server.judges)[me] then return 'judge' end
-  if idList(P.server.broadcasters)[me] then return 'streamer' end
+  if me then
+    if idList(P.server.judges)[me] then return 'judge' end
+    if idList(P.server.broadcasters)[me] then return 'streamer' end
+  end
+  if P.isAdmin() then return 'admin' end
   return nil
 end
 

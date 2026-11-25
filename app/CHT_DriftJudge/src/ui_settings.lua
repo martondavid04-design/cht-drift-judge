@@ -228,6 +228,9 @@ function S.drawTab(app)
   if not S.onlyChanged and schema.textMatches('online szerver változat steam bíró közvetítő szerep github pályaterv üzenet csatlakozás verzió csp', S.query) then
     S.serverInfo(app)
   end
+  if not S.onlyChanged and schema.textMatches('teszt tesztadat adat küldés feltöltés google táblázat debug hiba napló internet', S.query) then
+    S.uploadInfo(app)
+  end
 
   local filtering = S.query ~= '' or S.onlyChanged
   local shown = 0
@@ -373,7 +376,9 @@ function S.serverInfo(app)
     local id = platform.steamID()
     row('Steam ID', id or 'ez a CSP nem adja meg – a szerep a Beállításokban választható', (not id) and U.col.orange or nil)
     local role = platform.serverRole()
-    row('Szerep a szervertől', role == 'judge' and 'Bíró' or (role == 'streamer' and 'Közvetítő' or 'Pilóta (nincs a bírók / közvetítők listáján)'))
+    row('Szerep a szervertől', role == 'judge' and 'Bíró' or (role == 'streamer' and 'Közvetítő'
+      or (role == 'admin' and 'Szerveradmin – bíróként látja a pontokat' or 'Pilóta (nem admin, nincs a bírók listáján)')),
+      role and U.col.green or nil)
     row('Pontok a pilótáknak', platform.flag('pilotScores') and 'látszanak (pilotScores = 1)' or 'csak a bírók látják (pilotScores = 0)')
     local r = app.remote or {}
     local lay = r.state == 'ok' and ('letöltve: ' .. tostring(r.active)) or (r.state == 'loading' and 'letöltés…')
@@ -398,6 +403,40 @@ function S.serverInfo(app)
         app.loadServerLayouts(true)
       end
     end
+  end)
+end
+
+-- Test data to the Google Sheet (src/upload.lua)
+function S.uploadInfo(app)
+  local up = app.upload
+  if not up then return end
+  local st = up.stats
+  local state = up.stateText()
+  local on = state == 'bekapcsolva'
+  U.collapsible('set_upload', 'Tesztadatok küldése (Google táblázat)', { sub = state,
+    badge = (st.failed or 0) > 0 and string.format('%d hiba', st.failed) or nil, badgeColor = U.col.orange,
+    defaultOpen = false, tip = 'A tesztidőszakban a program a futásokat (a teljes felvétellel), a belépéseket és a hibákat elküldi a fejlesztő Google-táblázatába, hogy a gépeden is ellenőrizhető legyen, mi történt. Személyes adatot nem küld: csak a játékbeli nevet, az autót, a pályát és a futás adatait.' }, function()
+    if not app.platform.online then
+      if ui.checkbox('Tesztadatok küldése (futások, hibák)##uploadOn', app.settings.ui.uploadData ~= false) then
+        if app.settings.ui.uploadData == false then app.settings.ui.uploadData = nil else app.settings.ui.uploadData = false end
+        app.saveSettings()
+      end
+    else
+      U.text('A szerver állítja (upload = 1 / 0 a szerver beállításaiban).', 12, U.col.dim)
+    end
+    local function row(k, v, col)
+      U.text(k, 13, U.col.dim)
+      ui.sameLine(220)
+      U.text(v, 13, col or U.col.text)
+    end
+    row('Állapot', state, on and U.col.green or U.col.dim)
+    row('Elküldve', tostring(st.sent or 0) .. (st.lastOkText and ('  (utolsó: ' .. st.lastOkText .. ')') or ''))
+    if (st.queued or 0) > 0 then row('Küldésre vár', string.format('%d tétel, %.0f KB', st.queued, (st.bytes or 0) / 1024)) end
+    if (st.failed or 0) > 0 or (st.dropped or 0) > 0 then
+      row('Nem sikerült / eldobva', string.format('%d / %d', st.failed or 0, st.dropped or 0), U.col.orange)
+    end
+    if st.lastError then row('Utolsó hiba', tostring(st.lastError), U.col.orange) end
+    U.wrapped('Mit küld: belépéskor a verziót, a CSP-t és azt, hogy a CSP mit tud; minden futás végén az eredményt és a teljes felvételt; a program hibáit és a festésfelismerés adatait. A küldés a háttérben megy, a játékot nem lassítja.', 12, U.col.dim)
   end)
 end
 
