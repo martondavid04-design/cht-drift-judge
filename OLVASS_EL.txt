@@ -1,9 +1,10 @@
-CHT DRIFT JUDGE – 0.4.0 (2. fázis: verseny – kvalifikáció, Top 32 tábla, tandem, közvetítés)
+CHT DRIFT JUDGE – 0.4.1 (2. fázis: verseny – kvalifikáció, Top 32 tábla, tandem, közvetítés)
 CornerHuntersTeam drift bírói rendszer Assetto Corsához
 =====================================================================
 
 TARTALOM
-  0. Új a 0.4.0-ban (2. fázis: Verseny fül – kvali-táblázat, Top 32 tábla, tandem csaták mérése,
+  0. Új a 0.4.1-ben (ágrajz és nagy kvali-táblázat a közvetítésen, a versenyigazgató választja a
+     közvetítői képet; a pilóták gépe is méri a tandemet), a 0.4.0-ban (2. fázis: Verseny fül – kvali-táblázat, Top 32 tábla, tandem csaták mérése,
      bírói szavazás és OMT; közvetítői HUD; gyorsítási / lassítási térkép), a 0.3.15-ben (a bírókat
      az admin jelöli ki a játékban; új adattáblázat), a 0.3.14-ben
      (Versenyzők fül a bíróknak, néző mód, nagyobb szerkesztőpontok), a 0.3.13-ban
@@ -19,14 +20,34 @@ TARTALOM
   1. Telepítés
   2. Pályaterv készítése
   3. Futás és eredmény
-  4. TESZTELÉSI TERV – pontos lépések (T01–T72)
+  4. TESZTELÉSI TERV – pontos lépések (T01–T73)
   5. Mit küldjetek vissza
   6. Alapbeállítások
   7. Tesztjegyzőkönyv (kitöltendő minta)
 
 
-0. ÚJ A 0.4.0-BAN (2. FÁZIS)
----------------------------
+0. ÚJ A 0.4.1-BEN
+-----------------
+  • ÁGRAJZ A KÖZVETÍTÉSEN: a közvetítői HUD a teljes táblát is mutatja (Top 32 … Döntő és a győztes,
+    a továbbjutók zölddel, a mostani csata kiemelve), és a kvalifikáció végeredményét nagyban
+    (legfeljebb 32 sor, két oszlopban).
+  • A VERSENYIGAZGATÓ VÁLASZTJA A KÖZVETÍTŐI KÉPET: Verseny fül → „Közvetítői kép: Automatikus / Csata /
+    Ágrajz / Kvali-táblázat”; a közvetítő gépe ezt követi (Beállítások → Megjelenés → „Mit mutasson a
+    közvetítői HUD”: alapból „A versenyigazgató szerint”, de saját képet is választhat).
+    Automatikus: csata közben a párosítás és a két autó, a döntés után 10 mp-cel az ágrajz, amíg a
+    következő csata ki nem lesz választva; kvalifikációban a követett autó és a kvali-táblázat.
+  • A PILÓTÁK GÉPE IS MÉRI A TANDEMET: a csatában lévő két pilóta programja is méri a futást, és a végén
+    elküldi a versenyigazgatónak. A chase gépén a saját autója pontos (nem a hálózatról jön), ezért ott
+    pontosabb a közelség – a pontjavaslat ezt használja, ha megjött; a lead gépén a saját pedáljai
+    vannak, ezért ott pontosabb a gyorsítási / lassítási térkép ellenőrzése. A Csata nézetben:
+    „Mérés a pilóták saját gépén”.
+  • JAVÍTÁS: az üzenetekben az autók a szerver szerinti azonosítóval mennek (minden gépen más a helyi
+    sorszám – a saját autó mindig a 0.), így a bírók és a közvetítő gépén biztosan a jó két autó
+    látszik és mérődik.
+
+
+ÚJ A 0.4.0-BAN (2. FÁZIS)
+-------------------------
   • VERSENY FÜL (bíróknak, közvetítőnek, adminnak): egy gép vezeti a versenyt – a versenyigazgató
     (szerveradmin vagy bíró; a telepített appban bárki). „Új verseny indítása”: onnantól a
     kvalifikáció számít (a tesztkörök nem). A többi bíró és a közvetítő gépe magától követi
@@ -182,7 +203,7 @@ JAVÍTÁS A 0.3.13-BAN
     szerverről kapott mellett külön fut, és a saját (régi) verziószámát mutatja. A program most szól
     érte (üdvözlő üzenet, fő ablak, Beállítások). Teendő: kilépés után az
     assettocorsa\apps\lua\CHT_DriftJudge mappát nevezd át (pl. _CHT_DriftJudge-ra), vagy telepítsd
-    a legújabbat (GitHub: dist\CHT_DriftJudge_v0.4.0.zip). A 0.3.8-tól a telepített app szól a
+    a legújabbat (GitHub: dist\CHT_DriftJudge_v0.4.1.zip). A 0.3.8-tól a telepített app szól a
     szerverről kapottnak, és az ilyenkor csendben marad.
   • HA NINCS PÁLYATERV A SZERVEREN ehhez a pályához, a fő ablak tetején és a gombon is kiírja (zónák
     nélkül a program nem pontoz). A pályatervet a Pálya fül „Másolás” gombjával lehet elküldeni.
@@ -509,7 +530,7 @@ Content Manager ajánlott.
 
 A játékban a jobb oldali app-sávban két ablak jelenik meg:
   • CHT Drift Judge – a fő ablak (Élő, Eredmény, Futások, Pálya, Beállítások fülek).
-    A fejlécében látszik a verzió: v0.4.0 – ha nem ezt látod, a régi verzió fut.
+    A fejlécében látszik a verzió: v0.4.1 – ha nem ezt látod, a régi verzió fut.
   • CHT Drift HUD   – részletes kijelző: szög középről (bal / jobb), sebesség, fokozat,
     fordulatszám, kormányállás, gáz, fék, kézifék, kuplung, hajtás (van / nincs) és
     kerékkipörgés, zóna, hibák, utolsó pont. A HUD ablak fejlécében lévő fogaskerékkel
@@ -651,8 +672,8 @@ fejlécén látszik, kész-e. Ami hiányzik vagy hibás, az a Teendők panelen i
 4. TESZTELÉSI TERV – PONTOS LÉPÉSEK
 -----------------------------------
 ELŐKÉSZÜLETEK (minden tesztelőnél, egyszer):
-  1. Telepítsd a 0.4.0-t, és nézd meg, hogy a fő ablak fejlécében v0.4.0 látszik (a szerveren a
-     szerverről kapott változat fejlécében „v0.4.0 · online”).
+  1. Telepítsd a 0.4.1-et, és nézd meg, hogy a fő ablak fejlécében v0.4.1 látszik (a szerveren a
+     szerverről kapott változat fejlécében „v0.4.1 · online”).
   2. Beállítások fül → ha a fül neve „Beállítások (… mód.)”, nyomd meg a „Mind vissza
      alapra” gombot (és utána az „Igen, mind vissza alapra”-t). Így mindenki ugyanazzal a
      beállítással tesztel, és az eredmények összevethetők. Ha egy teszt kifejezetten
@@ -935,7 +956,7 @@ T50 – A program a szerverről (10 perc, a PrikezsiaGang szerveren)
   bejegyzés, próbáld ki.
   Elvárt: belépéskor az üzenet a gyorsbillentyűkkel, az első belépéskor a fő ablak magától
   megnyílik, a HUD látszik, zárt fő ablaknál a képernyő tetején a „CHT Drift Judge” gomb; a
-  fejlécben „v0.4.0 · online”; az ablakok
+  fejlécben „v0.4.1 · online”; az ablakok
   megnyílnak, mozgathatók; kilépés és újbóli belépés után ugyanott vannak.
   Írd fel: a CSP verziót; mit mutat az „Online változat és szerver” szekció minden sora (főleg a
   Steam ID és az „Üzenetek a szerveren” sor); hiba esetén a custom_shaders_patch.log-ot.
@@ -1075,9 +1096,13 @@ T70 – Szavazás, OMT, döntés (2 bíró)
 
 T71 – Közvetítői HUD (közvetítő gép, 1920×1080)
   Lépések: Beállítások → Megjelenés → Közvetítői HUD be; nézzétek kvalifikáció és tandem alatt is.
+  A versenyigazgató a Verseny fülön váltson: „Közvetítői kép: Ágrajz”, „Kvali-táblázat”, „Csata”,
+  „Automatikus”.
   Elvárt: kvalifikációban a követett autó adatai, az utolsó futása és a kvali-táblázat; tandemben
   fent a párosítás (LEAD / CHASE), két oldalt a két autó (szög, sebesség, fordulatszám, fokozat,
-  pedálok, hajtás), lent a közelség; a döntés után „TOVÁBBJUT: …”. A kattintás a játékba megy.
+  pedálok, hajtás), lent a közelség; a döntés után „TOVÁBBJUT: …”, Automatikusban 10 mp múlva az
+  ágrajz. A közvetítő gépe pár másodpercen belül követi a versenyigazgató választását. A kattintás a
+  játékba megy.
 
 T72 – Gyorsítási / lassítási térkép (1 gép)
   Lépések: menj egy futást, Pálya fül → 6. lépés → „Útvonal a legutóbbi futásból”; vegyél fel egy
@@ -1085,6 +1110,12 @@ T72 – Gyorsítási / lassítási térkép (1 gép)
   lead fékezzen a zöld szakaszon.
   Elvárt: a pályán a vonal zöld / piros / szürke; a tandem futásnál „Gyorsítási / lassítási térkép:
   1 eltérés – ZÖLD szakasz … m: fék”.
+
+T73 – A pilóták gépe is mér (0.4.1, a T69 közben)
+  Lépések: a T69 tandem futása után a versenyigazgató nyissa ki a futást a Csata nézetben.
+  Elvárt: „Mérés a pilóták saját gépén” – a chase és a lead gépének közelsége (és a lead gépén a
+  térkép-ellenőrzés); a chase pontjavaslata mellett „(a chase gépének közelségével)”. Ha a két mérés
+  nagyon eltér (pl. 1 m-nél többel az átlag), írjátok meg.
 
 === B BLOKK – MÁSODIK ALKALOM (kb. 1,5 óra) ===
 
@@ -1247,7 +1278,7 @@ a küszöböket, a pontozási arányt és a zónák távolságait.
 7. TESZTJEGYZŐKÖNYV (minta – másold ki egy jegyzetbe vagy táblázatba)
 ---------------------------------------------------------------------
 Tesztelő neve: ............   Dátum: ............   Pálya: ............   Autó: ............
-Kormány / pedál: ............   App verzió (fejléc): v0.4.0   CSP verzió: ............
+Kormány / pedál: ............   App verzió (fejléc): v0.4.1   CSP verzió: ............
 
 Teszt | Futás ideje (Eredmény fül) | Mit csináltam | Mit várt a bíró | Mit mutatott a program | Megjegyzés
 ------+----------------------------+---------------+-----------------+------------------------+-----------

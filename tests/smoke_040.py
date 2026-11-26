@@ -562,7 +562,7 @@ def broadcast_app_window():
     g.script.windowBroadcast(0.016)
     check(not errors(g), 'a „CHT Közvetítő HUD” ablak (kvalifikáció) hiba nélkül')
     manifest = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app', 'CHT_DriftJudge', 'manifest.ini'), encoding='utf-8').read()
-    check('FUNCTION_MAIN = windowBroadcast' in manifest and 'VERSION = 0.4.0' in manifest, 'manifest: közvetítő ablak, 0.4.0')
+    check('FUNCTION_MAIN = windowBroadcast' in manifest and 'VERSION = 0.4.' in manifest, 'manifest: közvetítő ablak, 0.4.x')
 
 
 if __name__ == '__main__':

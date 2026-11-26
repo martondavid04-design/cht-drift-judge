@@ -21,7 +21,7 @@ schema.uiDefaults = {
   depthOff = false, showBands = true,
   showCarPoint = false, autoOpenResult = true, saveAborted = false, carMode = 'auto', todoMode = 'panel',
   fillAlpha = 0.25, pointSize = 1.0, showPaintTool = false,
-  broadcastHud = false, broadcastQuali = true, decelAlways = false, eventAutoNext = true,
+  broadcastHud = false, broadcastQuali = true, decelAlways = false, eventAutoNext = true, broadcastScreen = 'director',
 }
 
 schema.groups = {
@@ -320,6 +320,10 @@ schema.items = {
   { key = 'broadcastHud', store = 'ui', group = 'display', kind = 'bool', impact = 'display',
     label = 'Közvetítői HUD (teljes képernyő)', desc = 'A közvetítéshez (Streamlabs, 1920×1080): tandemben a párosítás, a két autó adatai egymás mellett (szög, sebesség, fordulatszám, fokozat, pedálok, hajtás), a közelség és a győztes; kvalifikációban a követett autó, az utolsó futása és a kvali-táblázat. Online ezzel kapcsol be, a telepített appban a „CHT Közvetítő HUD” ablakkal.',
     effect = 'a képernyő (közvetítés)', keywords = 'stream közvetítés streamer broadcast obs streamlabs overlay' },
+  { key = 'broadcastScreen', store = 'ui', group = 'display', kind = 'combo', impact = 'display',
+    label = 'Mit mutasson a közvetítői HUD', desc = 'A versenyigazgató szerint: amit a Verseny fülön a versenyigazgató választ (Automatikus / Csata / Ágrajz / Kvali-táblázat). Automatikus: csata közben a párosítás és a két autó, a döntés után 10 mp-cel a teljes ágrajz; kvalifikációban a követett autó és a kvali-táblázat.',
+    effect = 'a közvetítői HUD', options = { { 'director', 'A versenyigazgató szerint' }, { 'auto', 'Automatikus' }, { 'battle', 'Csata (párosítás, két autó)' },
+      { 'bracket', 'Ágrajz (teljes tábla)' }, { 'quali', 'Kvali-táblázat (nagyban)' } }, keywords = 'stream ágrajz tábla bracket képernyő' },
   { key = 'broadcastQuali', store = 'ui', group = 'display', kind = 'bool', impact = 'display',
     label = 'Kvali-táblázat a közvetítői HUD-on', desc = 'Kvalifikáció alatt a jobb oldalon a rangsor (az első 16). Tandem csata alatt nem látszik.',
     effect = 'a közvetítői HUD', keywords = 'stream rangsor tabella' },

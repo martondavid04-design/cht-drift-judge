@@ -5,7 +5,7 @@
 -- The same code runs as an installed Lua app (apps/lua/CHT_DriftJudge) and as an online script that the
 -- server sends to every player (one bundled file from GitHub, see tools/build.py and src/platform.lua).
 
-local APP_VERSION = '0.4.0'
+local APP_VERSION = '0.4.1'
 
 local callable = require('src/fn').callable
 local config = require('src/config')

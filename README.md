@@ -112,8 +112,12 @@ Pályát offline, a telepített appal lehet készíteni (egyjátékos mód), és
   (`type = 'event'`, Versenyek lap + Drive-fájl), olvasás `?action=event&id=` / `?action=events&track=`.
   Üzenetek: `cht.driftjudge.evt.v1` (élő állapot: csata, autók indexe, ki vezet, fázis, mentett változat),
   `cht.driftjudge.vote.v1` (szavazat), `cht.driftjudge.tded.v1` (levonás / megjegyzés).
-- `src/ui_event.lua` (Verseny fül), `src/ui_broadcast.lua` (közvetítői HUD), `src/ui_decel.lua`
+- `src/ui_event.lua` (Verseny fül), `src/ui_broadcast.lua` (közvetítői HUD: csata, ágrajz, nagy
+  kvali-táblázat; a versenyigazgató választja az élő üzenet `screen` mezőjével), `src/ui_decel.lua`
   (Pálya fül 6. lépése).
+- 0.4.1: az üzenetekben az autók szerver-azonosítóval (`car.sessionID`, vissza `ac.getCar.serverSlot`),
+  mert a helyi sorszám gépenként más (a saját autó mindig a 0.). A csatában lévő két pilóta gépe is
+  méri a futást, és `cht.driftjudge.tmes.v1`-gyel elküldi (a chase gépének közelsége pontosabb).
 
 ## Pályatervek
 

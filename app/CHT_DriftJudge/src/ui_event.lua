@@ -163,6 +163,15 @@ local function header(app, E, ev)
   if director then
     ui.sameLine(0, 10)
     if U.button((showSettings and '▾ ' or '▸ ') .. 'Beállítások##evSet', 0, false, 'Bírók, a döntéshez kellő szavazatok, automatikus élesítés.') then showSettings = not showSettings end
+    -- what the broadcaster's HUD shows (0.4.1): the director switches it, the broadcaster's PC follows
+    U.text('Közvetítői kép:', 12, U.col.dim)
+    local cur = ev.screen or 'auto'
+    for _, sc in ipairs({ { 'auto', 'Automatikus', 'Csata közben a párosítás és a két autó, a döntés után 10 mp-cel az ágrajz; kvalifikációban a kvali-táblázat.' },
+      { 'battle', 'Csata', 'A párosítás és a két autó adatai.' }, { 'bracket', 'Ágrajz', 'A teljes tábla a képernyőn (a győztesek zölddel, a mostani csata kiemelve).' },
+      { 'quali', 'Kvali-táblázat', 'A kvalifikáció végeredménye nagyban (legfeljebb 32 sor).' } }) do
+      ui.sameLine(0, 6)
+      if U.button((cur == sc[1] and '● ' or '') .. sc[2] .. '##evScr_' .. sc[1], 0, false, sc[3] .. ' A közvetítő gépe ezt követi (ha ott „A versenyigazgató szerint” van beállítva).') then E.setScreen(sc[1]) end
+    end
   end
   if director and showSettings then
     ui.offsetCursorX(12)
@@ -401,7 +410,9 @@ local function runCard(app, E, b, run, measuredHere)
   end
   deductionPanel(app, E, b, run, 'lead')
   -- chase
-  U.text(string.format('CHASE %s – javasolt %s / 40%s', tostring(run.chase), t1(math.max(0, (s.chasePts or 0) - cDed)), cDed > 0 and string.format(' (−%s)', t1(cDed)) or ''), 13, U.col.purple, true)
+  local cPts = E.chasePoints(run)
+  U.text(string.format('CHASE %s – javasolt %s / 40%s%s', tostring(run.chase), t1(math.max(0, cPts - cDed)), cDed > 0 and string.format(' (−%s)', t1(cDed)) or '',
+    (run.measured and run.measured.chase) and ' (a chase gépének közelségével)' or ''), 13, U.col.purple, true)
   resultLine('  solo mérés: ', s.chaseResult, run.chaseOwn)
   local p = s.prox or {}
   U.text(string.format('  Közelség: átlag %s · legkisebb %s · 3 m-en belül %s · 3–4 m %s · 4 m fölött %s', m1(p.avg), m1(p.min), pct(p.near), pct(p.weak), pct(p.far)), 12,
@@ -415,6 +426,29 @@ local function runCard(app, E, b, run, measuredHere)
   listLines(s.incomplete and s.incomplete.chase, U.col.red, '  INCOMPLETE? ')
   listLines(s.warnings and s.warnings.chase, U.col.orange, '  ! ')
   deductionPanel(app, E, b, run, 'chase')
+  -- the pilots' own PCs (0.4.1)
+  local ms = run.measured
+  if ms and (ms.lead or ms.chase) then
+    U.text('Mérés a pilóták saját gépén', 13, U.col.text, true)
+    U.tip('A chase gépén a saját autója pontos (nem a hálózatról jön), ezért ott a közelség a pontosabb – a pontjavaslat ezt használja. A lead gépén a saját pedáljai vannak, ezért ott pontosabb a gyorsítási / lassítási térkép ellenőrzése.')
+    for _, role in ipairs({ 'chase', 'lead' }) do
+      local m = ms[role]
+      if m then
+        U.text(string.format('  %s gépe (%s): közelség átlag %s · legkisebb %s · 3 m-en belül %s · 3–4 m %s · 4 m fölött %s', tostring(m.by), role == 'lead' and 'lead' or 'chase',
+          m1(m.proxAvg), m1(m.proxMin), pct(m.near), pct(m.weak), pct(m.far)), 12, (m.proxAvg or 99) <= 3 and U.col.green or ((m.proxAvg or 99) <= 4 and U.col.yellow or U.col.orange))
+        local parts = {}
+        if m.contacts and m.contacts > 0 then parts[#parts + 1] = string.format('kontaktus %d (%s)', m.contacts, m.fault == 'lead' and 'a lead hibája lehet' or 'a chase hibája lehet') end
+        if m.mapCount and m.mapCount > 0 then
+          parts[#parts + 1] = string.format('térkép: %d eltérés%s', m.mapCount, m.map1 and (' – ' .. decelmap.violationText(m.map1)) or '')
+        elseif role == 'lead' and s.map and s.map.has then
+          parts[#parts + 1] = 'térkép: rendben'
+        end
+        if m.pass then parts[#parts + 1] = 'előzés' end
+        if m.solo then parts[#parts + 1] = m.soloZero and ('solo: NULLÁS' .. (m.zeroReason ~= '' and (' (' .. m.zeroReason .. ')') or '')) or ('solo: ' .. t1(m.solo)) end
+        if #parts > 0 then U.text('    ' .. table.concat(parts, ' · '), 12, U.col.dim) end
+      end
+    end
+  end
   -- contacts
   if (s.contactCount or 0) > 0 then
     U.text(string.format('KONTAKTUS: %d', s.contactCount), 13, U.col.red, true)

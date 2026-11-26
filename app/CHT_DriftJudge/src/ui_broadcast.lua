@@ -2,7 +2,10 @@
 -- designed for 1920×1080, scaled to the screen).
 --   tandem battle: pairing bar (round, seeds, who leads), the two cars side by side (angle, speed, RPM,
 --                  gear, pedals, drive indicator), proximity meter, contact flag, the winner when decided;
---   qualifying / solo: the followed car's data, its last result, the qualifying table.
+--   qualifying / solo: the followed car's data, its last result, the qualifying table;
+--   0.4.1: the whole bracket (Top 32 … final, the winners in green, the current battle marked) and the
+--   qualifying standings in big – the race director chooses (Verseny tab → Közvetítői kép), or the
+--   broadcaster's own setting; Automatikus = the bracket 10 s after a decision, until the next battle.
 -- Online: Beállítások → Közvetítői HUD (or the Verseny tab); installed app: the „CHT Közvetítő HUD”
 -- window (it draws over the whole screen wherever the window is).
 
@@ -205,12 +208,139 @@ local function lastResultOf(app, name)
   return nil
 end
 
+-- The whole bracket: one column per round (Top 32 … Döntő) and the winner, the current battle marked.
+function B.drawBracket(app, o, k)
+  local E = app.event
+  local ev = E and E.ev
+  local br = ev and ev.bracket
+  if not br then return false end
+  local champ = bracket.champion(br)
+  rect(o, k, 40, 18, 1840, 70)
+  frame(o, k, 40, 18, 1840, 70, U.col.accent)
+  text(o, k, tostring(ev.name or 'Verseny'), 30, 64, 34, U.col.text, true)
+  textR(o, k, champ and ('GYŐZTES: ' .. champ) or 'ÁGRAJZ', 26, 1856, 38, champ and U.col.green or U.col.dim, true)
+  local cur = nil
+  local st = battleState(app)
+  if st and st.b then cur = st.b.id end
+  local R = #br.rounds
+  local cols = R + 1
+  local colW = math.min(380, 1840 / cols)
+  local left = 40 + (1840 - colW * cols) / 2
+  local boxW = colW - 36
+  local top, avail = 150, 900
+  local n1 = #br.rounds[1].battles
+  local boxH = math.max(34, math.min(84, avail / n1 - 10))
+  local fs = math.max(12, math.min(20, boxH * 0.34))
+  local function slotY(r, i)
+    local n = #br.rounds[r].battles
+    local h = avail / n
+    return top + (i - 1) * h + (h - boxH) / 2
+  end
+  for r, round in ipairs(br.rounds) do
+    local x = left + (r - 1) * colW
+    textC(o, k, round.name, 16, x + boxW / 2, top - 30, U.col.dim, true)
+    for i, b in ipairs(round.battles) do
+      local y = slotY(r, i)
+      local isCur = b.id == cur and not b.winner
+      rect(o, k, x, y, boxW, boxH, rgbm(0.03, 0.035, 0.05, 0.86), 6)
+      frame(o, k, x, y, boxW, boxH, isCur and U.col.accent or (b.winner and rgbm(0.35, 0.88, 0.55, 0.35) or panelLine))
+      for kk, side in ipairs({ 'a', 'b' }) do
+        local name = b[side]
+        local seed = side == 'a' and b.seedA or b.seedB
+        local won = b.winner == side
+        local col = name and (b.winner and (won and U.col.green or U.col.dim) or U.col.text) or U.col.dim
+        local label = name and string.format('%s%s', seed and (seed .. '. ') or '', name) or (b.bye and '–' or '')
+        text(o, k, label, fs, x + 10, y + (kk == 1 and boxH * 0.08 or boxH * 0.52), col, won)
+      end
+      if b.omt then textR(o, k, 'OMT', 11, x + boxW - 6, y + 4, U.col.yellow, true) end
+      -- connector to the next round (or to the winner box)
+      local ny
+      if r < R then
+        ny = slotY(r + 1, math.ceil(i / 2)) + boxH / 2
+      else
+        ny = top + avail / 2
+      end
+      local mx = x + boxW + (colW - boxW) / 2
+      local yMid = y + boxH / 2
+      local lc = b.winner and rgbm(0.35, 0.88, 0.55, 0.55) or rgbm(1, 1, 1, 0.18)
+      ui.drawLine(o + vec2((x + boxW) * k, yMid * k), o + vec2(mx * k, yMid * k), lc, 2 * k)
+      ui.drawLine(o + vec2(mx * k, yMid * k), o + vec2(mx * k, ny * k), lc, 2 * k)
+      ui.drawLine(o + vec2(mx * k, ny * k), o + vec2((x + colW) * k, ny * k), lc, 2 * k)
+    end
+  end
+  -- the winner
+  local x = left + R * colW
+  local y = top + avail / 2 - boxH * 0.7
+  rect(o, k, x, y, boxW, boxH * 1.4, rgbm(0.03, 0.035, 0.05, 0.9), 8)
+  frame(o, k, x, y, boxW, boxH * 1.4, champ and U.col.green or panelLine)
+  textC(o, k, 'GYŐZTES', 14, x + boxW / 2, y + 8, U.col.dim, true)
+  textC(o, k, champ or '?', math.max(16, fs * 1.2), x + boxW / 2, y + boxH * 0.55, champ and U.col.green or U.col.dim, true)
+  return true
+end
+
+-- The qualifying standings in big (up to 32 rows, two columns).
+function B.drawQualiBig(app, o, k)
+  local E = app.event
+  local ev = E and E.ev
+  if not ev then return false end
+  local rows = {}
+  for _, e in ipairs(E.qualiTable()) do if e.status == 'ok' then rows[#rows + 1] = e end end
+  rect(o, k, 40, 18, 1840, 70)
+  frame(o, k, 40, 18, 1840, 70, U.col.accent)
+  text(o, k, tostring(ev.name or 'Verseny'), 30, 64, 34, U.col.text, true)
+  textR(o, k, 'KVALIFIKÁCIÓ', 26, 1856, 38, U.col.dim, true)
+  local perCol = 16
+  local rowH = 54
+  for i = 1, math.min(32, #rows) do
+    local e = rows[i]
+    local col = math.floor((i - 1) / perCol)
+    local x = 60 + col * 920
+    local y = 120 + ((i - 1) % perCol) * rowH
+    rect(o, k, x, y, 880, rowH - 8, i % 2 == 0 and rgbm(0.03, 0.035, 0.05, 0.82) or rgbm(0.06, 0.065, 0.085, 0.86), 6)
+    if i <= 3 then frame(o, k, x, y, 880, rowH - 8, i == 1 and U.col.green or rgbm(1, 1, 1, 0.25)) end
+    text(o, k, tostring(e.place or i) .. '.', 22, x + 16, y + 10, U.col.dim, true)
+    text(o, k, e.name, 22, x + 80, y + 10, U.col.text, i <= 8)
+    local function sc(r) if not r then return '–' end if r.zero then return '0' end return U.t1(r.final) end
+    textR(o, k, sc(e.second), 18, x + 740, y + 13, U.col.dim)
+    textR(o, k, sc(e.best), 24, x + 864, y + 9, i == 1 and U.col.green or U.col.text, true)
+  end
+  if #rows == 0 then text(o, k, 'még nincs futás', 22, 80, 140, U.col.dim) end
+  return true
+end
+
+-- Which screen to show now: 'battle' | 'bracket' | 'quali' | 'solo'.
+function B.screen(app)
+  local E = app.event
+  local ev = E and E.ev
+  local mode = app.settings.ui.broadcastScreen or 'director'
+  if mode == 'director' then mode = E and E.requestedScreen and E.requestedScreen() or 'auto' end
+  local st = battleState(app)
+  local hasBracket = ev and ev.bracket ~= nil
+  if mode == 'bracket' then return hasBracket and 'bracket' or (ev and 'quali' or 'solo') end
+  if mode == 'quali' then return ev and 'quali' or 'solo' end
+  if mode == 'battle' then return st and 'battle' or (hasBracket and 'bracket' or 'solo') end
+  -- automatic
+  if st then
+    local decided = st.winner and st.b and E.decidedAt and E.decidedAt[st.b.id]
+    local clk = (E.clockFn or os.clock)()
+    if decided and clk - decided > 10 then return 'bracket' end
+    if st.winner and not decided and hasBracket then return 'bracket' end
+    return 'battle'
+  end
+  if hasBracket then return 'bracket' end
+  return 'solo'
+end
+
 -- Draws the whole overlay. o = where the 1920×1080 canvas starts in this window's coordinates, sw / sh =
 -- the screen size in pixels.
 function B.draw(app, o, sw, sh)
   local k = math.min(sw / 1920, sh / 1080)
   o = o + vec2((sw - 1920 * k) / 2, (sh - 1080 * k) / 2)
-  local st = battleState(app)
+  local scr = B.screen(app)
+  B.lastScreen = scr
+  if scr == 'bracket' and B.drawBracket(app, o, k) then return end
+  if scr == 'quali' and B.drawQualiBig(app, o, k) then return end
+  local st = scr == 'battle' and battleState(app) or nil
   if st then
     pairingBar(o, k, st)
     carPanel(app, o, k, 30, 160, st.carA, st.leadSide == 'a' and 'LEAD' or (st.leadSide == 'b' and 'CHASE' or nil))

@@ -7,8 +7,13 @@
 --   cht.driftjudge.evt.v1   director → everyone: which battle, who leads, run n, phase, the saved version
 --   cht.driftjudge.vote.v1  judge → director: A / B / One More Time for a battle (and for its OMT)
 --   cht.driftjudge.tded.v1  judge → director: a deduction / note on one driver of one tandem run (A16)
+--   cht.driftjudge.tmes.v1  pilot → director (0.4.1): the run as the lead's / chase's own PC measured it
 -- Every PC with a role measures the armed tandem run too (src/tandem.lua), so the judges and the
 -- broadcaster see proximity, angles and contacts at once; the director's measurement is the one saved.
+-- 0.4.1: the two pilots' PCs measure it as well and send a summary: on the chase's PC its own car is
+-- exact, so its proximity is the better one; on the lead's PC the pedals are its own (accel / decel map).
+-- Cars go in the messages by their server slot (session ID): the local index differs between the PCs
+-- (index 0 is always the PC's own car).
 --
 -- Rules: see src/bracket.lua and src/tandem.lua (A02–A06, A11, A13–A17, B01, B06, DM 2025 1.8–1.16).
 
@@ -26,6 +31,10 @@ E.trackKey = nil           -- '<battle>#<run>' the tracker belongs to
 E.live = nil               -- last live message from the director (other PCs)
 E.localRuns = {}           -- ['<battle>#<run>'] = summary measured on this PC (for the judges until the saved one arrives)
 E.myVotes = {}             -- ['<battle>#p<pair>'] = 'a' | 'b' | 'omt' sent from this PC
+E.trackMine = nil          -- 'lead' | 'chase' when this PC's own car is in the measured run (0.4.1)
+E.pending = {}             -- director: pilots' measurements that came before the run was recorded
+E.decidedAt = {}           -- [battle] = clock() when its decision was seen here (broadcaster HUD)
+E.screens = { 'auto', 'battle', 'bracket', 'quali' }
 E.messages = {}            -- short log of what happened (UI)
 E.fetch = { state = 'none' }
 E.saveDelay = 2            -- s: changes are sent together
@@ -35,7 +44,7 @@ E.clockFn = nil
 local function clock() return (E.clockFn or os.clock)() end
 
 local app = nil
-local liveFn, voteFn, dedFn = nil, nil, nil
+local liveFn, voteFn, dedFn, measFn = nil, nil, nil, nil
 local saveAt, savingRev, savedRev = nil, nil, 0
 local nextFetchAt, nextListAt = math.huge, math.huge
 local wantFetch = nil
@@ -99,6 +108,38 @@ function E.carOf(name)
     end
   end
   return nil
+end
+
+-- Car of this PC (local index) → server slot, and back. ac.getCar(0) is always the PC's own car, so the
+-- local index of a car differs from PC to PC; the session ID is the same everywhere.
+function E.sessionOf(idx)
+  if idx == nil then return nil end
+  local ok, c = pcall(ac.getCar, idx)
+  local sid = ok and c and c.sessionID
+  if type(sid) == 'number' and sid >= 0 then return sid end
+  return idx
+end
+
+function E.localOf(sid)
+  sid = tonumber(sid)
+  if not sid or sid < 0 or sid == 255 then return nil end
+  local okF, f = pcall(function() return ac.getCar.serverSlot end)
+  if okF and callable(f) then
+    local ok, c = pcall(f, sid)
+    if ok and c and type(c.index) == 'number' and c.index >= 0 then return c.index end
+  end
+  local okS, sim = pcall(ac.getSim)
+  local n = okS and sim and sim.carsCount or 0
+  local known = false
+  for i = 0, n - 1 do
+    local ok, c = pcall(ac.getCar, i)
+    if ok and c and type(c.sessionID) == 'number' and c.sessionID >= 0 then
+      known = true
+      if c.sessionID == sid then return i end
+    end
+  end
+  if known then return nil end -- session IDs are known, none matches: not on the server (any more)
+  return sid                   -- no session IDs (single player, tests): the same index
 end
 
 -- Saving ---------------------------------------------------------------------------------------------------
@@ -434,6 +475,7 @@ local function storeSummary(s)
     contacts = contacts, contactCount = #(s.contacts or {}), init = s.init, angle = s.angle, line = s.line,
     pass = s.pass and { t = s.pass.t } or nil, incomplete = s.incomplete, warnings = s.warnings, restarts = s.restarts,
     map = { has = s.map and s.map.has, violations = viol, count = #(s.map and s.map.violations or {}) },
+    scores = s.scores,
   }
 end
 E.storeSummary = storeSummary
@@ -486,6 +528,15 @@ local function recordRun(summary)
   }
   run.leadOwn = E.ownResult(run.lead, run.startedAt or run.armedAt)
   run.chaseOwn = E.ownResult(run.chase, run.startedAt or run.armedAt)
+  for _, role in ipairs({ 'lead', 'chase' }) do
+    local k = b.id .. '#' .. tostring(run.n) .. '#' .. role
+    local m = E.pending[k]
+    if m and m.by == run[role] then
+      run.measured = run.measured or {}
+      run.measured[role] = m
+    end
+    E.pending[k] = nil
+  end
   b.runs[#b.runs + 1] = run
   local pairRuns = E.pairRuns(b, run.pair)
   cur.state = #pairRuns >= 2 and 'voting' or 'review'
@@ -542,6 +593,7 @@ function E.setWinner(b, side, how)
   b.winner = side
   b.done = true
   b.decision = { winner = side, how = how, at = now(), by = ownName(), omt = b.omt or nil }
+  E.decidedAt[b.id] = clock()
   bracket.propagate(ev.bracket)
   local cur = ev.current
   if cur and cur.battle == b.id then cur.state = 'decided' end
@@ -643,6 +695,18 @@ function E.deductionTotal(run, target)
   return s
 end
 
+-- Suggested chase points of a run: with the chase's own PC's proximity when it came (0.4.1: more exact,
+-- its own car is not an interpolated remote one), else the director's measurement.
+function E.chasePoints(r)
+  local s = r.summary or {}
+  local m = r.measured and r.measured.chase
+  if not m or not s.scores or (s.chasePts or 0) <= 0 or not m.near then return s.chasePts or 0 end
+  local prox = (m.near or 0) + 0.5 * (m.weak or 0)
+  local pts = 40 * (0.5 * prox + 0.25 * (s.scores.angle or 0) + 0.25 * (s.scores.line or 0))
+  if s.init and s.init.late then pts = pts * 0.9 end
+  return math.floor(pts * 10 + 0.5) / 10
+end
+
 -- Suggested battle total per driver (informational, after deductions): lead part + chase part of the pair.
 function E.suggestion(b)
   local pair = E.pairOf(b)
@@ -656,7 +720,7 @@ function E.suggestion(b)
     end
     if r.chase then
       out[r.chase] = out[r.chase] or {}
-      out[r.chase].chase = math.max(0, (s.chasePts or 0) - E.deductionTotal(r, 'chase'))
+      out[r.chase].chase = math.max(0, E.chasePoints(r) - E.deductionTotal(r, 'chase'))
     end
   end
   for _, v in pairs(out) do v.total = (v.lead or 0) + (v.chase or 0) end
@@ -667,12 +731,25 @@ end
 local phases = { idle = 0, armed = 1, running = 2, review = 3, voting = 4, decided = 5 }
 local phaseNames = { [0] = 'idle', 'armed', 'running', 'review', 'voting', 'decided' }
 
--- (names go as car indices – the same on every PC – so a long or accented name is never cut in two;
--- the director as a short fingerprint of the name)
+-- (names go as server slots – the same on every PC – so a long or accented name is never cut in two;
+-- the director as a short fingerprint of the name; screen = what the broadcaster HUD should show)
+local screenCodes = { auto = 0, battle = 1, bracket = 2, quali = 3 }
+local screenNames = { [0] = 'auto', 'battle', 'bracket', 'quali' }
 local function liveLayout()
   local S = ac.StructItem
   return { S.key('cht.driftjudge.evt.v1'), eventId = S.string(24), rev = S.uint32(), director = S.uint32(), battle = S.string(8),
-    carA = S.byte(), carB = S.byte(), lead = S.byte(), phase = S.byte(), run = S.byte(), pair = S.byte(), winner = S.byte() }
+    carA = S.byte(), carB = S.byte(), lead = S.byte(), phase = S.byte(), run = S.byte(), pair = S.byte(), winner = S.byte(),
+    screen = S.byte() }
+end
+
+-- A pilot's PC → the director: the run as it was measured there (fractions as 0–200, −1 / 255 = none).
+local function measLayout()
+  local S = ac.StructItem
+  return { S.key('cht.driftjudge.tmes.v1'), eventId = S.string(24), battle = S.string(8), run = S.byte(), role = S.byte(),
+    proxAvg = S.float(), proxMin = S.float(), near = S.byte(), weak = S.byte(), far = S.byte(),
+    contacts = S.byte(), contactT = S.float(), fault = S.byte(), initDiff = S.float(), angleDiff = S.float(), lineDev = S.float(),
+    pass = S.byte(), mapCount = S.byte(), mColor = S.byte(), mKind = S.byte(), mFrom = S.float(), mTo = S.float(),
+    solo = S.float(), soloZero = S.byte(), zeroReason = S.string(24) }
 end
 
 -- Fingerprint of a name (31-multiplier rolling hash, fits a uint32).
@@ -697,9 +774,9 @@ function E.sendLive()
   if not liveFn or not E.isDirector() or not available() then return false end
   local ev = E.ev
   local b, cur = E.current()
-  local ca, cb = b and E.carOf(b.a), b and E.carOf(b.b)
+  local ca, cb = b and E.sessionOf(E.carOf(b.a)), b and E.sessionOf(E.carOf(b.b))
   local msg = { eventId = ev.id, rev = savedRev, director = E.nameHash(ownName()), battle = b and b.id or '',
-    carA = ca or 255, carB = cb or 255,
+    carA = ca or 255, carB = cb or 255, screen = screenCodes[ev.screen or 'auto'] or 0,
     lead = cur and cur.leadSide == 'b' and 2 or (cur and cur.leadSide == 'a' and 1 or 0),
     phase = cur and phases[cur.state] or 0, run = cur and cur.run or 0, pair = b and E.pairOf(b) or 1,
     winner = b and (b.winner == 'a' and 1 or (b.winner == 'b' and 2 or 0)) or 0 }
@@ -718,11 +795,7 @@ function E.receiveLive(sender, msg)
   if not msg or not sender or sender.index == 0 then return end
   local id = tostring(msg.eventId or '')
   if id == '' then return end
-  local function car(v)
-    v = tonumber(v)
-    if not v or v == 255 or v < 0 then return nil end
-    return v
-  end
+  local function car(v) return E.localOf(v) end
   local function nameOf(i)
     if not i then return '' end
     local okN, n = pcall(ac.getDriverName, i)
@@ -734,26 +807,111 @@ function E.receiveLive(sender, msg)
     a = nameOf(ca), b = nameOf(cb), directorHash = tonumber(msg.director) or 0,
     director = okD and dn and tostring(dn) or '?', leadSide = msg.lead == 2 and 'b' or (msg.lead == 1 and 'a' or nil),
     phase = phaseNames[tonumber(msg.phase) or 0] or 'idle', run = tonumber(msg.run) or 0, pair = tonumber(msg.pair) or 1,
-    winner = msg.winner == 1 and 'a' or (msg.winner == 2 and 'b' or nil), at = clock(), from = sender.index }
+    winner = msg.winner == 1 and 'a' or (msg.winner == 2 and 'b' or nil), at = clock(), from = sender.index,
+    screen = screenNames[tonumber(msg.screen) or 0] or 'auto' }
   E.live = live
+  if live.winner and live.battle ~= '' and not E.decidedAt[live.battle] then E.decidedAt[live.battle] = clock() end
   -- someone else directs now (took over): this PC follows
   if E.ev and E.ev.id == id and E.isDirector() and live.directorHash ~= E.nameHash(ownName()) then
     note('A versenyt most ' .. live.director .. ' vezeti.', 'warn')
     E.ev.director = { name = live.director }
   end
   if not E.ev or E.ev.id ~= id or (live.rev > (E.ev.rev or 0)) then scheduleFetch(id, 0.5) end
-  -- measure the armed run here too (judges, broadcaster)
-  if not E.isDirector() and E.involved() and (live.phase == 'armed' or live.phase == 'running') and live.leadSide then
+  -- measure the armed run here too (judges, broadcaster – and 0.4.1: the two pilots, on their own PC)
+  local mine = nil
+  if live.leadSide and (live.carA == 0 or live.carB == 0) then
+    local ownSide = live.carA == 0 and 'a' or 'b'
+    mine = ownSide == live.leadSide and 'lead' or 'chase'
+  end
+  if not E.isDirector() and (E.involved() or mine) and (live.phase == 'armed' or live.phase == 'running') and live.leadSide then
     local key = live.battle .. '#' .. live.run
     if E.trackKey ~= key then
       local b = { id = live.battle, a = live.a, b = live.b }
       local tr = (live.carA and live.carB) and newTracker(b, live.leadSide, { a = live.carA, b = live.carB }) or nil
-      E.tracker, E.trackKey = tr, tr and key or nil
+      E.tracker, E.trackKey, E.trackMine = tr, tr and key or nil, tr and mine or nil
     end
   elseif not E.isDirector() and E.tracker and E.tracker.state ~= 'done' and live.phase ~= 'armed' and live.phase ~= 'running' then
     -- the director ended / dropped the run
-    if live.phase == 'idle' then E.tracker, E.trackKey = nil, nil end
+    if live.phase == 'idle' then E.tracker, E.trackKey, E.trackMine = nil, nil, nil end
   end
+end
+
+-- Pilot's PC: the summary of its own measurement to the director.
+local kindCodes = { drop = 1, brake = 2, handbrake = 3 }
+local kindNames = { 'drop', 'brake', 'handbrake' }
+local colorCodes = { green = 1, orange = 2, red = 3 }
+local colorNames = { 'green', 'orange', 'red' }
+local function frac(v) if v == nil then return 255 end return math.max(0, math.min(200, math.floor(v * 200 + 0.5))) end
+local function unfrac(v) v = tonumber(v) if not v or v > 200 then return nil end return v / 200 end
+local function opt(v) if v == nil then return -999 end return v end
+local function unopt(v) v = tonumber(v) if not v or v <= -998 then return nil end return v end
+
+function E.sendMeasure(key, role, s)
+  if not measFn or not available() or not s then return false end
+  local battle, run = tostring(key):match('^(.-)#(%d+)$')
+  if not battle then return false end
+  local p = s.prox or {}
+  local c1 = s.contacts and s.contacts[1]
+  local v1 = s.map and s.map.violations and s.map.violations[1]
+  local res = role == 'lead' and s.leadResult or s.chaseResult
+  local msg = {
+    eventId = (E.live and E.live.eventId) or (E.ev and E.ev.id) or '', battle = battle, run = tonumber(run), role = role == 'lead' and 1 or 2,
+    proxAvg = opt(p.avg), proxMin = opt(p.min), near = frac(p.near), weak = frac(p.weak), far = frac(p.far),
+    contacts = math.min(254, #(s.contacts or {})), contactT = opt(c1 and c1.t), fault = c1 and (c1.leadFault and 1 or 2) or 0,
+    initDiff = opt(s.init and s.init.diff), angleDiff = opt(s.angle and s.angle.avgDiff), lineDev = opt(s.line and s.line.avgDev),
+    pass = s.pass and 1 or 0, mapCount = math.min(254, #(s.map and s.map.violations or {})),
+    mColor = v1 and colorCodes[v1.color] or 0, mKind = v1 and kindCodes[v1.kind] or 0, mFrom = opt(v1 and v1.from), mTo = opt(v1 and v1.to),
+    solo = opt(res and res.final), soloZero = res and res.zero and 1 or 0,
+    zeroReason = tostring(res and res.zeroReasons and res.zeroReasons[1] or ''):sub(1, 23),
+  }
+  local ok, r = pcall(measFn, msg)
+  return ok and r ~= false
+end
+
+function E.receiveMeasure(sender, msg)
+  if not msg or not sender or sender.index == 0 or not E.isDirector() then return end
+  if tostring(msg.eventId or '') ~= E.ev.id then return end
+  local b = E.battle(tostring(msg.battle or ''))
+  if not b then return end
+  local okN, name = pcall(ac.getDriverName, sender.index)
+  name = okN and name and tostring(name) or ''
+  if name ~= b.a and name ~= b.b then return end -- only the two pilots of the battle
+  local role = msg.role == 1 and 'lead' or 'chase'
+  local m = {
+    by = name, proxAvg = unopt(msg.proxAvg), proxMin = unopt(msg.proxMin), near = unfrac(msg.near), weak = unfrac(msg.weak), far = unfrac(msg.far),
+    contacts = tonumber(msg.contacts) or 0, contactT = unopt(msg.contactT), fault = msg.fault == 1 and 'lead' or (msg.fault == 2 and 'chase' or nil),
+    initDiff = unopt(msg.initDiff), angleDiff = unopt(msg.angleDiff), lineDev = unopt(msg.lineDev), pass = msg.pass == 1,
+    mapCount = tonumber(msg.mapCount) or 0, solo = unopt(msg.solo), soloZero = msg.soloZero == 1,
+    zeroReason = tostring(msg.zeroReason or ''), at = now(),
+  }
+  if m.mapCount > 0 and colorNames[tonumber(msg.mColor) or 0] then
+    m.map1 = { color = colorNames[msg.mColor], kind = kindNames[tonumber(msg.mKind) or 0] or 'drop', from = unopt(msg.mFrom), to = unopt(msg.mTo) }
+  end
+  local n = tonumber(msg.run) or 0
+  for _, r in ipairs(b.runs or {}) do
+    if r.n == n then
+      if r[role] ~= name then return end
+      r.measured = r.measured or {}
+      r.measured[role] = m
+      E.touch(string.format('%d. futás: %s gépének mérése megérkezett (%s)', n, name, role))
+      return
+    end
+  end
+  E.pending[b.id .. '#' .. n .. '#' .. role] = m -- the director's run is not recorded yet
+end
+
+-- Director: what the broadcaster HUD shows ('auto' | 'battle' | 'bracket' | 'quali').
+function E.setScreen(sc)
+  if not E.ev or not E.isDirector() or not screenCodes[sc] then return end
+  E.ev.screen = sc
+  E.touch(nil)
+end
+
+-- The screen the director asked for (on any PC that follows the competition).
+function E.requestedScreen()
+  if E.isDirector() then return E.ev and E.ev.screen or 'auto' end
+  if E.live and E.ev and E.live.eventId == E.ev.id then return E.live.screen or 'auto' end
+  return E.ev and E.ev.screen or 'auto'
 end
 
 function E.receiveVote(sender, msg)
@@ -856,7 +1014,8 @@ function E.update(dt)
         recordRun(s)
       else
         E.localRuns[E.trackKey] = storeSummary(s)
-        E.tracker = nil
+        if E.trackMine then E.sendMeasure(E.trackKey, E.trackMine, s) end
+        E.tracker, E.trackMine = nil, nil
       end
     elseif E.isDirector() and E.tracker.state == 'running' then
       local _, cur = E.current()
@@ -908,6 +1067,8 @@ function E.init(a)
   if okV then voteFn = v end
   local okD, d = pcall(ac.OnlineEvent, dedLayout(), wrap(E.receiveDeduction), namespace())
   if okD then dedFn = d end
+  local okM, m = pcall(ac.OnlineEvent, measLayout(), wrap(E.receiveMeasure), namespace())
+  if okM then measFn = m end
 end
 
 -- Text exports --------------------------------------------------------------------------------------------------
@@ -939,6 +1100,7 @@ end
 function E._reset()
   E.ev, E.tracker, E.trackKey, E.live = nil, nil, nil, nil
   E.localRuns, E.myVotes, E.messages = {}, {}, {}
+  E.pending, E.decidedAt, E.trackMine = {}, {}, nil
   E.fetch = { state = 'none' }
   saveAt, savingRev, savedRev = nil, nil, 0
   nextFetchAt, nextListAt, wantFetch = math.huge, math.huge, nil
