@@ -289,6 +289,7 @@ ac.SharedNamespace = { Global = '', Shared = 'shared', ServerScript = 'server_sc
 function ac.getFolder(id) return id == 'ACDocuments' and 'C:/Users/T/Documents/Assetto Corsa' or ('C:/AC/' .. tostring(id)) end
 function ac.getSim() return STUB.sim end
 function ac.getCar(i) return STUB.cars[i or 0] end
+function ac.focusCar(i) STUB.sim.focusedCar = i; STUB.focusCalls = (STUB.focusCalls or 0) + 1 end
 function ac.getTrackFullID(sep) return 'trackwood_pro_reverse_2026' .. (sep and '' or '') end
 function ac.getTrackName() return 'Trackwood Pro Reverse 2026' end
 function ac.getCarID(i) return 'cht_mazda_rx8' end

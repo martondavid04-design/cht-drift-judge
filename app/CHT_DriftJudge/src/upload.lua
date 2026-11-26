@@ -240,8 +240,8 @@ function M.run(record)
   local sp = res and res.split or {}
   local runId = M.sessionId .. '-' .. runCounter
   local msg = {
-    type = 'run', runId = runId, tag = tagNames[record.tag] or record.tag or 'futás',
-    driver = h.driver, car = h.car, track = h.track, layout = record.layoutName,
+    type = 'run', runId = runId, tag = tagNames[record.tag] or record.tag or (h.spectated and 'futás (néző gépén)' or 'futás'),
+    driver = h.driver, car = h.car, track = h.track, layout = record.layoutName, judgedBy = h.judgedBy,
     summary = {
       time = h.time,
       final = res and res.final, line = sp.line, angle = sp.angle, style = sp.style,
@@ -260,7 +260,7 @@ function M.run(record)
     slim.samplesLeftOut = n
     msg.record = slim
   end
-  local what = (msg.tag == 'futás' and res) and ('futás, ' .. (res.zeroRun and 'nullás' or string.format('%.1f pont', res.final or 0))) or msg.tag
+  local what = ((msg.tag == 'futás' or msg.tag == 'futás (néző gépén)') and res) and ('futás, ' .. (res.zeroRun and 'nullás' or string.format('%.1f pont', res.final or 0))) or msg.tag
   return push('run', msg, what)
 end
 

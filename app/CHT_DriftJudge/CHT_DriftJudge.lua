@@ -3,7 +3,7 @@
 -- The same code runs as an installed Lua app (apps/lua/CHT_DriftJudge) and as an online script that the
 -- server sends to every player (one bundled file from GitHub, see tools/build.py and src/platform.lua).
 
-local APP_VERSION = '0.3.13'
+local APP_VERSION = '0.3.14'
 
 local callable = require('src/fn').callable
 local config = require('src/config')
@@ -25,6 +25,7 @@ local visibility = require('src/visibility')
 local platform = require('src/platform')
 local controls = require('src/controls')
 local netsync = require('src/netsync')
+local Drivers = require('src/ui_drivers')
 local upload = require('src/upload')
 
 local app = {
@@ -42,6 +43,13 @@ app.netsync = netsync
 app.upload = upload
 app.cfg = config.merge(app.settings.scoring)
 if visibility.migrate(app.settings) then storage.saveSettings(app.settings) end
+-- 0.3.14: the judged car follows the camera by default (spectator mode). Older settings had 'own' as
+-- the default; switch it once (a later choice of 'own' in the settings stays).
+if not app.settings.ui.carModeAuto then
+  if app.settings.ui.carMode == nil or app.settings.ui.carMode == 'own' then app.settings.ui.carMode = 'auto' end
+  app.settings.ui.carModeAuto = true
+  storage.saveSettings(app.settings)
+end
 
 local recorder = telemetry.newRecorder(3, 600)
 app.freeRecorder = telemetry.newRecorder(0, 600)
@@ -106,12 +114,29 @@ U.onOpenChange = function() app.saveSoon() end
 
 -- Car being judged ---------------------------------------------------------------------------------
 
-function app.car()
-  local sim = ac.getSim()
-  local idx = 0
-  if app.settings.ui.carMode == 'focused' and sim.focusedCar >= 0 then idx = sim.focusedCar end
-  return ac.getCar(idx)
+-- Which car the program judges and shows: 'auto' (default since 0.3.14) and 'focused' = the car the
+-- camera shows (spectator / judge PC: the followed driver; while driving: your own car), 'own' = car 0.
+function app.carIndex()
+  local okS, sim = pcall(ac.getSim)
+  local mode = app.settings.ui.carMode
+  if mode ~= 'own' and okS and sim then
+    local f = tonumber(sim.focusedCar) or -1
+    -- free camera with no car in focus: stay on the car followed so far (a judge looking around with F7
+    -- does not abort the run they are watching)
+    if f < 0 and (app.watchedCar or 0) > 0 then f = app.watchedCar end
+    local n = tonumber(sim.carsCount) or 1
+    if f >= 0 and f < n then
+      local okC, c = pcall(ac.getCar, f)
+      if okC and c and c.isConnected ~= false then return f end
+    end
+  end
+  return 0
 end
+function app.car()
+  return ac.getCar(app.carIndex())
+end
+-- Is the judged car someone else's (spectating / following with the camera)?
+function app.watchingOther() return (app.watchedCar or 0) ~= 0 end
 
 -- Layout handling ----------------------------------------------------------------------------------
 
@@ -270,10 +295,17 @@ local function saveRecord(rows, result, tag)
     end
     local file = path:match('[^/\\]+$')
     if record.result and app.lastResult == record.result and app.resultMeta then app.resultMeta.file = file end
+    local sp = result and result.split or {}
+    local f = result and result.faults or {}
     Runs.addToIndex({
       file = file, time = header.time, driver = header.driver, car = header.car,
       final = result and result.final or nil, zero = result and result.zeroRun or false,
       layout = app.layout.name, tag = tag,
+      -- 0.3.14: for the Versenyzők tab
+      carIndex = header.carIndex, spectated = header.spectated or nil,
+      line = sp.line, angle = sp.angle, style = sp.style,
+      zeroReason = result and result.zeroRun and table.concat(result.zeroReasons or {}, ', ') or nil,
+      oneWheel = f.oneWheel, twoWheel = f.twoWheel, corrections = f.corrections, wallSaves = f.wallSaves, overRot = f.overRotations,
     })
   end)
 end
@@ -311,6 +343,9 @@ end
 -- switched it off (sendResults = 0); installed app – unless switched off in Beállítások.
 function app.sendRunResult(res)
   if app.passive then return end
+  -- only your own runs: a spectator's / judge's PC judging the followed car must not send it in that
+  -- driver's place (the pilot's own program sends the measured result, with every frame)
+  if (app.watchedCar or 0) ~= 0 then return end
   local allowed
   if platform.online then allowed = platform.flag('sendResults') else allowed = app.settings.ui.sendResults ~= false end
   if allowed then netsync.sendRun(res, app.layout and app.layout.name, APP_VERSION) end
@@ -689,7 +724,7 @@ local function updateFrame(dt)
     if app.watchedCar ~= nil and app.judge.state ~= 'idle' then
       app.judge:reset()
       recorder:stop()
-      status('Másik autó lett kiválasztva – a futás megszakadt.', U.col.orange)
+      status('A kamera másik autóra váltott – a futás megszakadt (Beállítások → Figyelt autó).', U.col.orange)
     end
     app.watchedCar = car.index
     rebuildJudge()
@@ -771,6 +806,7 @@ local function drawTrack()
   opts.fill = vis('fills')
   opts.fillOff = vis('offtrack')
   opts.fillAlpha = type(ui_.fillAlpha) == 'number' and ui_.fillAlpha or 0.25
+  opts.pointSize = type(ui_.pointSize) == 'number' and ui_.pointSize or 1
   if vis('bins') and app.lastResult and app.resultLayout == app.layout then
     opts.bins = {}
     for _, z in ipairs(app.lastResult.zones or {}) do if z.index then opts.bins[z.index] = z.bins end end
@@ -1035,6 +1071,15 @@ function script.windowMain(dt)
       end)
     end)
     ui.tabItem('Futások###runsTab', tabFlags('runs'), function() Runs.drawRunsTab(app) end)
+    -- judges / streamer: every competitor's points on their own (0.3.14); pilots on an online server
+    -- where the points are kept for the judges don't get this tab
+    if platform.canSeeScores() then
+      ui.tabItem('Versenyzők###drvTab', tabFlags('drivers'), function()
+        ui.childWindow('##drv', vec2(ui.availableSpaceX(), ui.availableSpaceY() - 22), false, ui.WindowFlags.None, function()
+          Drivers.drawTab(app)
+        end)
+      end)
+    end
     ui.tabItem('Pálya' .. (app.dirty and ' *' or '') .. (nZoneErr > 0 and string.format(' (%d hiba)', nZoneErr) or '') .. '###palyaTab', tabFlags('editor'), function()
       app.editorSeenAt = os.clock()
       ui.childWindow('##ed', vec2(ui.availableSpaceX(), ui.availableSpaceY() - 22), false, ui.WindowFlags.None, function()

@@ -13,6 +13,7 @@ telemetry.fields = {
   'sv',          -- bitmask: wheels on a surface AC marks as not valid track
   'se',          -- packed surfaceExtendedType of the 4 wheels (4 bits each), for analysis
   'clutch', 'dslip', -- clutch value as AC gives it, driven wheels spin (tyre surface speed / wheel ground speed - 1)
+  'wfb',         -- 0.3.14: bitmask of wheels whose contact point was missing (remote car) and was estimated
 }
 local precision = {
   t = 3, px = 3, py = 2, pz = 3, lvx = 3, lvz = 3, spd = 2, steer = 1, gas = 2, brake = 2, hb = 2,
@@ -84,18 +85,38 @@ function telemetry.sample(car, t)
     s.rlx, s.rlz, s.rrx, s.rrz = rear[1].x, rear[1].z, rear[2].x, rear[2].z
   end
 
-  local sg, sv, se = 0, 0, 0
+  -- Wheels. A car driven on another PC (spectator / judge following it with the camera) may come without
+  -- physics contact data: then the contact point is empty or far from the car and the surface reads as
+  -- „grass” (0). Such a wheel is placed from its visual position (or the car's outline) and its surface
+  -- flags are not used, so a spectated run is not zeroed by missing data (0.3.14).
+  local sg, sv, se, fb = 0, 0, 0, 0
   for i = 0, 3 do
     local wh = car.wheels[i]
     local wp = wh.contactPoint
-    s['w' .. i .. 'x'], s['w' .. i .. 'z'] = wp.x, wp.z
     local bitv = 2 ^ i
-    local st, ext = wh.surfaceType, wh.surfaceExtendedType or 0
-    if st == 0 or st == 1 or ext == 2 or ext == 3 or ext == 6 then sg = sg + bitv end -- grass, dirt, gravel, sand
-    if wh.surfaceValidTrack == false then sv = sv + bitv end
-    se = se + (ext % 16) * 16 ^ i
+    local okP = wp ~= nil and (wp.x ~= 0 or wp.z ~= 0) and (wp.x - p.x) ^ 2 + (wp.z - p.z) ^ 2 < 25
+    if okP then
+      s['w' .. i .. 'x'], s['w' .. i .. 'z'] = wp.x, wp.z
+      local st, ext = wh.surfaceType, wh.surfaceExtendedType or 0
+      if st == 0 or st == 1 or ext == 2 or ext == 3 or ext == 6 then sg = sg + bitv end -- grass, dirt, gravel, sand
+      if wh.surfaceValidTrack == false then sv = sv + bitv end
+      se = se + (ext % 16) * 16 ^ i
+    else
+      fb = fb + bitv
+      local q = wh.position
+      if q ~= nil and (q.x ~= 0 or q.z ~= 0) and (q.x - p.x) ^ 2 + (q.z - p.z) ^ 2 < 25 then
+        s['w' .. i .. 'x'], s['w' .. i .. 'z'] = q.x, q.z
+      else
+        -- wheel order: 0 front left, 1 front right, 2 rear left, 3 rear right
+        local f = i < 2 and 1.3 or -1.3
+        local sd = (i % 2 == 0) and -0.75 or 0.75
+        local look, side = car.look, car.side
+        s['w' .. i .. 'x'] = p.x + look.x * f + side.x * sd
+        s['w' .. i .. 'z'] = p.z + look.z * f + side.z * sd
+      end
+    end
   end
-  s.sg, s.sv, s.se = sg, sv, se
+  s.sg, s.sv, s.se, s.wfb = sg, sv, se, fb
   s.clutch = car.clutch
   s.dslip = telemetry.drivenSlip(car)
 
@@ -162,7 +183,14 @@ function telemetry.header(car, extra)
     cspCode = ac.getPatchVersionCode and ac.getPatchVersionCode() or 0,
     appVersion = extra and extra.appVersion or '',
     time = extra and extra.time or '',
+    carIndex = car.index,
   }
+  -- 0.3.14: judged on someone else's PC (spectator / judge following the car with the camera)
+  if (car.index or 0) ~= 0 then
+    h.spectated = true
+    local okN, me = pcall(ac.getDriverName, 0)
+    h.judgedBy = okN and me or ''
+  end
   return h
 end
 

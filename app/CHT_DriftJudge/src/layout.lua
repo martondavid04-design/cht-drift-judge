@@ -308,7 +308,7 @@ function layout.validateDetailed(l)
       local rev = layout.reversals(z.points)
       if rev > 0 then
         add('warn', 'zigzag', string.format('%s: a vonal %d helyen visszafordul / cikcakkos (oda-vissza ugráló pontok).', z.name, rev),
-          'Ez általában hibás nyomkövetés (a pontok a két autósarok között ugráltak). Torzítja a pontozást, a pályaelhagyást és a súlyt is: rajzold újra (pl. „Pontok törlése és újrarajzolás”, vagy a „Zóna a festésből”).', { zone = i })
+          'Ez általában hibás nyomkövetés (a pontok a két autósarok között ugráltak). Torzítja a pontozást, a pályaelhagyást és a súlyt is: rajzold újra (pl. „Pontok törlése és újrarajzolás”).', { zone = i })
       end
     end
     if z.type ~= 'LIMIT' and n >= need and not layout.isAutoWeighted(l, z) and (z.maxPoints or 0) <= 0 then

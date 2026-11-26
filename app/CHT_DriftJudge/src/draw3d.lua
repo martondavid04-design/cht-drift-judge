@@ -26,6 +26,60 @@ local colBad = rgbm(3.0, 0.3, 0.2, 1)
 
 local lift = 0.06
 local v1, v2 = vec3(), vec3()
+local v3, vUp = vec3(), vec3(0, 1, 0)
+local callable = require('src/fn').callable
+
+-- Editor point markers (0.3.14, client request: bigger, higher contrast). Not the zone colour: white /
+-- green (first) / purple (last) on a black ring stands out on every zone colour and on the asphalt.
+draw3d.pointColors = {
+  mid = rgbm(4, 4, 4, 1),
+  first = rgbm(0.2, 4, 0.5, 1),
+  last = rgbm(3.6, 0.3, 4, 1),
+  hot = rgbm(4, 3.4, 0, 1),     -- the point under the mouse / picked for moving
+  del = rgbm(4, 0.2, 0.2, 1),
+  ring = rgbm(0, 0, 0, 1),
+}
+draw3d.pointScale = 1
+local pointLabelCol = rgbm(4, 4, 4, 1)
+
+local function drawDisc(x, y, z, r, col)
+  v3:set(x, y, z)
+  if callable(render.circle) then
+    local ok = pcall(render.circle, v3, vUp, r, col)
+    if ok then return end
+  end
+  render.debugPoint(v3, r * 1.6, col)
+end
+
+-- kind: 'mid' | 'first' | 'last' | 'hot' | 'del' (or an rgbm); label: number / text above the pole
+function draw3d.pointMarker(p, kind, label, scale)
+  local k = (scale or draw3d.pointScale or 1)
+  local col = type(kind) == 'string' and (draw3d.pointColors[kind] or draw3d.pointColors.mid) or (kind or draw3d.pointColors.mid)
+  local x, y, z = p.x, (p.y or 0), p.z
+  local r = 0.42 * k
+  -- black ring, then the coloured disc on it
+  drawDisc(x, y + lift + 0.01, z, r * 1.35, draw3d.pointColors.ring)
+  drawDisc(x, y + lift + 0.02, z, r, col)
+  -- pole with a point on top: visible from the far side of the track as well
+  local top = y + 1.1 * k
+  v1:set(x, y + lift, z)
+  v2:set(x, top, z)
+  render.debugLine(v1, v2, col, col)
+  render.debugPoint(v2, 0.45 * k, col)
+  if label then
+    v2:set(x, top + 0.35 * k, z)
+    render.debugText(v2, tostring(label), pointLabelCol, 0.9 * math.max(1, k))
+  end
+end
+
+-- Markers for every point of a zone line: first / last coloured, number above each (selected zone).
+function draw3d.zonePoints(pts, numbered)
+  local n = #pts
+  for k = 1, n do
+    local kind = (n > 1 and k == 1) and 'first' or ((n > 1 and k == n) and 'last' or 'mid')
+    draw3d.pointMarker(pts[k], kind, numbered and tostring(k) or nil)
+  end
+end
 
 local function yAt(points, pl, s)
   -- interpolate height along the reference polyline
@@ -270,8 +324,7 @@ local function drawICLines(z, cz, c, sel, showRings)
     end
   end
   if sel then
-    v1:set(p.x, y + lift, p.z)
-    render.debugPoint(v1, 0.35, c)
+    draw3d.pointMarker({ x = p.x, y = y, z = p.z }, 'mid', 'IC')
   end
 end
 
@@ -292,6 +345,7 @@ end
 --         settings (colours), cfg, fill (zone fill), fillOff (off-track strip), fillAlpha }
 function draw3d.drawLayout(l, compiled, opts)
   opts = opts or {}
+  draw3d.pointScale = tonumber(opts.pointSize) or 1
   if opts.depthOff then render.setDepthMode(render.DepthMode.Off) else render.setDepthMode(render.DepthMode.ReadOnlyLessEqual) end
 
   for _, key in ipairs({ 'start', 'judging', 'finish' }) do
@@ -351,14 +405,12 @@ function draw3d.drawLayout(l, compiled, opts)
       line(pts[k].x, pts[k].y, pts[k].z, pts[k + 1].x, pts[k + 1].y, pts[k + 1].z, c)
     end
     if drawLines and (sel or opts.showPoints) then
-      for k = 1, #pts do
-        v1:set(pts[k].x, (pts[k].y or 0) + lift, pts[k].z)
-        render.debugPoint(v1, sel and 0.35 or 0.2, c)
-      end
-    end
-    if drawLines and #pts == 1 then
-      v1:set(pts[1].x, (pts[1].y or 0) + lift, pts[1].z)
-      render.debugPoint(v1, 0.4, c)
+      -- selected zone: full markers with numbers; others while editing: smaller markers
+      draw3d.pointScale = (tonumber(opts.pointSize) or 1) * (sel and 1 or 0.6)
+      draw3d.zonePoints(pts, sel)
+      draw3d.pointScale = tonumber(opts.pointSize) or 1
+    elseif drawLines and #pts == 1 then
+      draw3d.pointMarker(pts[1], 'mid')
     end
 
     -- track limit: short ticks every 2 m pointing to the track side (inside)
@@ -457,18 +509,20 @@ function draw3d.drawDraft(points, closed, color)
     line(a.x, a.y, a.z, b.x, b.y, b.z, color)
   end
   for k = 1, #points do
-    v1:set(points[k].x, (points[k].y or 0) + lift, points[k].z)
-    render.debugPoint(v1, 0.3, color)
+    draw3d.pointMarker(points[k], k == 1 and 'first' or 'mid', tostring(k))
   end
 end
 
 function draw3d.marker(p, color, text)
+  local k = draw3d.pointScale or 1
   v1:set(p.x, (p.y or 0) + lift, p.z)
   render.setDepthMode(render.DepthMode.Off)
-  render.debugCross(v1, 0.6, color or colSel)
+  render.debugCross(v1, 0.9 * k, color or colSel)
+  drawDisc(p.x, (p.y or 0) + lift + 0.01, p.z, 0.3 * k, draw3d.pointColors.ring)
+  drawDisc(p.x, (p.y or 0) + lift + 0.02, p.z, 0.2 * k, color or colSel)
   if text then
-    v2:set(p.x, (p.y or 0) + 0.9, p.z)
-    render.debugText(v2, text, color or colSel, 0.9)
+    v2:set(p.x, (p.y or 0) + 1.3 * k, p.z)
+    render.debugText(v2, text, color or colSel, 1.0 * math.max(1, k))
   end
   render.setDepthMode(render.DepthMode.Normal)
 end

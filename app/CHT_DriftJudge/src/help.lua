@@ -40,7 +40,7 @@ help.topics = {
     text = 'A HUD ablak fogaskerék gombjával vagy a Beállítások → HUD modulok résznél: modulok ki-be, Fel / Le sorrend, előbeállítások (Edzés, Részletes, Minimál, Közvetítő), méret és háttér. Az Edzés előbeállítás az élő adatokat és a futás összesítőjét (pont Line / Angle / Stílus bontásban, hibák) mutatja.',
     keywords = 'hud modul sorrend méret közvetítő' },
   { title = 'Zóna automatikusan a festésből', tab = 'editor',
-    text = 'Pálya fül → 3. Zónák → „Zóna a festésből”. Állj az autóval a festett zóna mellé (ne takarja a festést), válaszd ki a típust, állítsd a kamerát (F7) felülről a zóna fölé, nyomd meg az Indítást, és kattints a keret belsejébe. A keretnek nem kell zártnak lennie: ha egy oldala hiányzik vagy kopott, a vonalvégek között lezárja (narancs vonal). Kép forrása: Automatikus (felülnézeti kép, ha üres: a képernyő), Felülnézeti kép, vagy Képernyő (amit látsz). Előnézet után „Elfogadás”.',
+    text = 'Kísérleti, alapból rejtve (Beállítások → Megjelenés → „Zóna a festésből eszköz”). Pálya fül → 3. Zónák → „Zóna a festésből”. Állj az autóval a festett zóna mellé (ne takarja a festést), válaszd ki a típust, állítsd a kamerát (F7) felülről a zóna fölé, nyomd meg az Indítást, és kattints a keret belsejébe. A keretnek nem kell zártnak lennie: ha egy oldala hiányzik vagy kopott, a vonalvégek között lezárja (narancs vonal). Kép forrása: Automatikus (felülnézeti kép, ha üres: a képernyő), Felülnézeti kép, vagy Képernyő (amit látsz). Előnézet után „Elfogadás”.',
     keywords = 'automatikus festés szín felismerés lerakás méret festett zóna nyitott keret hézag képernyő felülnézet forrás' },
   { title = 'IC – belső érintési pont', tab = 'editor',
     text = 'Új zóna: „+ IC”. Egy pont, ahová az első lökhárítónak a legközelebb kell érnie (belső clip). Pontozás: a lökhárító legkisebb távolsága a ponttól – a „Teljes pont sugara” (alap 0,5 m) alatt 100%, a „Zóna sugara” (alap 2,5 m) felett 0%, közte egyenletesen. Lerakás: kattintással, „Pont az autóhoz” (belső első sarok), vagy a festésből (a festett jelre kattintva). Újra lerakva áthelyeződik; a Méret és helyzet részben centiméterre is mozgatható.',
@@ -63,6 +63,12 @@ help.topics = {
   { title = 'Teendő jóváhagyása vagy a panel elrejtése', tab = 'live',
     text = 'Ha egy figyelmeztetés nálatok nem hiba (pl. egyenes vonal 2 ponttal), nyomd meg a „Rendben, így jó” gombot: a pályatervbe mentődik, és amíg a vonal nem változik, nem szól. A panel elrejthető (Mindig / Csak ha HIBA van / Elrejtve), a felső sorban akkor is látszik a szám.',
     keywords = 'teendők jóváhagyás elrejtés eltüntetés rendben' },
+  { title = 'Versenyzők fül: minden pilóta pontja külön', tab = 'drivers',
+    text = 'Bíróknak és a közvetítőnek. Pilótánként a futások és pontok (legjobb, második legjobb, futások száma, nullások), rangsorban: legjobb futás, aztán a második legjobb, aztán a legjobb Line / Angle / Stílus (C13). Forrás: „pilóta gépe” = a pilóta saját programja küldte (ez a hivatalos), „ez a gép” = ezen a gépen számolva (saját vezetés vagy a kamerával követett autó). A ▸ gomb kinyitja a pilóta futásait, ott bírói levonás is beírható. „Követés”: a kamera arra az autóra vált. „Másolás táblázatként”: a rangsor a vágólapra (Excel, Google Táblázat, Discord).',
+    keywords = 'versenyzők pilóták rangsor bíró pontok külön kvalifikáció tabella' },
+  { title = 'Néző mód (spectator): a követett autó pontozása', tab = 'settings', query = 'figyelt',
+    text = 'Alapból (Figyelt autó: Automatikus) a program azt az autót pontozza és mutatja a HUD-on, amelyiket a kamera követ: vezetés közben a sajátodat, nézőként vagy bíróként azt, akit követsz (a HUD tetején: „Néző mód – név”). A követett autó eredménye ezen a gépen tájékoztató, és nem megy el a pilóta nevében: a hivatalos pontot a pilóta saját programja küldi. A Versenyzők fülön a „Követés” gombbal válthatsz autót.',
+    keywords = 'néző spectator követés kamera hud bíró közvetítő' },
 }
 
 function help.search(query, textMatches)

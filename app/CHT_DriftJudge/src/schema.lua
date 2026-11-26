@@ -19,8 +19,8 @@ schema.impacts = {
 -- Defaults of the display / app options (stored in settings.ui). Scoring defaults come from config.defaults.
 schema.uiDefaults = {
   depthOff = false, showBands = true,
-  showCarPoint = false, autoOpenResult = true, saveAborted = false, carMode = 'own', todoMode = 'panel',
-  fillAlpha = 0.25,
+  showCarPoint = false, autoOpenResult = true, saveAborted = false, carMode = 'auto', todoMode = 'panel',
+  fillAlpha = 0.25, pointSize = 1.0, showPaintTool = false,
 }
 
 schema.groups = {
@@ -297,8 +297,8 @@ schema.items = {
     desc = 'Ha az autót a bírálat alatt visszarakják (reset, boxba ugrás, teleport), a futás nullás kör lesz és elmentődik. Kikapcsolva a futás megszakad, eredmény nélkül. A JUDGING vonal előtt a visszarakás mindig csak megszakítás.',
     effect = 'NULLÁS KÖR visszarakásnál', keywords = 'reset teleport box visszarakás' },
   { key = 'carMode', store = 'ui', group = 'run', kind = 'combo', impact = 'detect',
-    label = 'Figyelt autó', desc = 'Kit pontoz az app: a saját autódat, vagy azt, amelyiket a kamera követi (bíró / közvetítő gépen).',
-    effect = 'melyik autó futását pontozza', options = { { 'own', 'Saját autó' }, { 'focused', 'A kamerával követett autó' } }, keywords = 'kamera focused bíró' },
+    label = 'Figyelt autó', desc = 'Kit pontoz és mutat a program (HUD, Élő, Eredmény). Automatikus: amelyik autót a kamera mutatja – vezetés közben a sajátod, nézőként (spectator) vagy bíróként az, akit követsz. A más gépéről nézett autó eredménye tájékoztató: a hivatalos pontot a pilóta saját programja küldi (Versenyzők fül).',
+    effect = 'melyik autó futását pontozza', options = { { 'auto', 'Automatikus (amit a kamera mutat)' }, { 'own', 'Mindig a saját autó' }, { 'focused', 'A kamerával követett autó' } }, keywords = 'kamera focused bíró néző spectator követés' },
   { key = 'autoOpenResult', store = 'ui', group = 'run', kind = 'bool', impact = 'display',
     label = 'Eredmény fül automatikus megnyitása', desc = 'Futás után magától átvált az Eredmény fülre.', effect = 'melyik fül látszik futás után', keywords = 'eredmény' },
   { key = 'saveAborted', store = 'ui', group = 'run', kind = 'bool', impact = 'file',
@@ -313,6 +313,12 @@ schema.items = {
   { key = 'fillAlpha', store = 'ui', group = 'display', kind = 'slider', min = 0.05, max = 0.8, fmt = '%.2f', impact = 'display',
     label = 'Kitöltés erőssége', desc = 'Mennyire legyen átlátszó a színes kitöltés (kisebb = átlátszóbb, jobban látszik alatta a pálya).',
     effect = 'a pályán látható rajz', keywords = 'átlátszóság szín kitöltés' },
+  { key = 'pointSize', store = 'ui', group = 'display', kind = 'slider', min = 0.5, max = 3, fmt = '%.1f×', impact = 'display',
+    label = 'Zónapontok mérete (szerkesztő)', desc = 'A lerakott zónapontok jelölőjének mérete a pályán: talpkorong fekete kerettel, egy oszlop és a pont sorszáma. Az első pont zöld, az utolsó lila, a többi fehér – így minden zónaszín és az aszfalt mellett is jól látszik.',
+    effect = 'a pályán látható rajz (szerkesztés közben)', keywords = 'pont méret nagyobb jelölő szerkesztő kontraszt' },
+  { key = 'showPaintTool', store = 'ui', group = 'display', kind = 'bool', impact = 'display',
+    label = 'Zóna a festésből eszköz (kísérleti)', desc = 'A Pálya fülön megjelenik a „Zóna a festésből” eszköz, ami a festett vonalakból rak le zónát. A CHT szerint nincs rá szükség (D20), ezért alapból rejtve van.',
+    effect = 'a Pálya fül zóna listája', keywords = 'festés paint felismerés automatikus' },
   { key = 'depthOff', store = 'ui', group = 'display', kind = 'bool', impact = 'display',
     label = 'Mindig látszódjanak (falon át is)', desc = 'A rajz akkor is látszik, ha valami (fal, autó) eltakarná.', effect = 'a pályán látható rajz', keywords = 'depth' },
   { key = 'showBands', store = 'ui', group = 'display', kind = 'bool', impact = 'display',

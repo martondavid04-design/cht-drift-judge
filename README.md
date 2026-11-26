@@ -71,6 +71,16 @@ Ami egy gépen módosult, nem vész el: marad, amíg a közös nem változik; ha
 `<név> (helyi)` néven megmarad (`settings.layoutSync` tartja nyilván, melyik közös változat van a gépen).
 Pályát offline, a telepített appal lehet készíteni (egyjátékos mód), és onnan feltölteni.
 
+## Bíróknak: Versenyzők fül és néző mód (0.3.14)
+
+- **Versenyzők fül**: pilótánként minden futás és pont, rangsor (legjobb → második legjobb → a legjobb
+  Line / Angle / Stílus), bírói levonás futásonként, „Követés” (kamera az autóra), „Másolás
+  táblázatként” (TSV). Ott látszik, ahol a pontok is (`platform.canSeeScores()`).
+- **Néző mód**: `ui.carMode = 'auto'` (alap) – a kamera által követett autót pontozza és mutatja
+  (`sim.focusedCar`; szabad kameránál marad a követett). A követett autó eredményét a gép nem küldi el
+  a pilóta nevében; a tesztadatokban „futás (néző gépén)” címkével megy, `judgedBy` mezővel. Hiányzó
+  kerékadatnál (távoli autó) a kerék helye becsült, a felülete nem számít (`wfb` mező a felvételben).
+
 ## Pályatervek
 
 `layouts/<pálya kulcsa>/<név>.json` (és opcionálisan `layouts/<pálya kulcsa>/index.json`: a nevek
@@ -81,5 +91,5 @@ Pálya fülén a „Másolás” gombbal vihető ki.
 
 - `app/CHT_DriftJudge/` – a forrás (ugyanez fut telepítve és online)
 - `python3 tools/build.py` – elkészíti az `online/cht_drift_judge.lua` és a `dist/…zip` fájlt
-- `python3 tests/scenarios.py` és `python3 tests/smoke_038.py` – offline tesztek CSP-csonkkal
+- `python3 tests/scenarios.py` és `python3 tests/smoke_038.py` … `smoke_0314.py` – offline tesztek CSP-csonkkal
   (`pip install lupa`)

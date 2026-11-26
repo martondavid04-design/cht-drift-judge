@@ -4,7 +4,6 @@
 local geom = require('src/geom')
 local U = require('src/ui_common')
 local telemetry = require('src/telemetry')
-local slipEma = 0
 local modlist = require('src/modlist')
 local platform = require('src/platform')
 local visibility = require('src/visibility')
@@ -29,7 +28,7 @@ Live.hudItems = {
   { key = 'brake', label = 'Fék', desc = 'Fékpedál 0–100%.' },
   { key = 'handbrake', label = 'Kézifék', desc = 'Kézifék 0–100%.' },
   { key = 'clutch', label = 'Kuplung', desc = 'Kuplungpedál: 100% = teljesen lenyomva (nincs hajtás).' },
-  { key = 'drive', label = 'Hajtás és kerékkipörgés', desc = 'VAN / NINCS (és miért: üres, kuplung, nincs gáz), és a kipörgés: a hajtott kerék forgásának mekkora része pörgés (0% = nem pörög, 50% = kétszer olyan gyorsan forog, mint ahogy halad, 100% = helyben pörög). A Részletes nézetben km/h-ban is.' },
+  { key = 'drive', label = 'Hajtás jelző', desc = 'VAN / NINCS (és miért: üres, kuplung, nincs gáz). (A kipörgésjelzőt a megrendelő kérésére kivettük, D26: hibásan mutatott.)' },
   { key = 'zone', label = 'Aktuális zóna', desc = 'Melyik zónában vagy éppen.' },
   { key = 'faults', label = 'Hibaszámláló', desc = '1 kerék, 2 kerék, korrekció, fal utáni mentés, túldobás – a futás alatt.' },
   { key = 'last', label = 'Utolsó futás pontja', desc = 'Futás után a végső pontszám (vagy NULLÁS).' },
@@ -216,19 +215,8 @@ drawers.drive = function(c)
   U.text('Hajtás', 13 * c.k, U.col.dim)
   ui.sameLine(c.labelW)
   U.text(engaged and 'VAN' or ('NINCS' .. why), 14 * c.k, engaged and U.col.green or U.col.orange, true)
-  -- wheelspin: which part of the driven wheels' turning is spin, (surface − ground) / surface: 0% = no
-  -- spin, 50% = the tyre turns twice as fast as it moves, 100% = spinning on the spot. Until 0.3.6 this
-  -- was (surface − ground) / ground, which showed up to 500% at a standing start (CHT, 2026-11-14).
-  local surf, ground = telemetry.drivenSpeeds(car)
-  local share = surf > 1 and (surf - ground) / surf or 0
-  if share ~= share then share = 0 end
-  slipEma = slipEma + (geom.clamp(share, 0, 1) - slipEma) * 0.25
-  local slip = geom.clamp(slipEma, 0, 1)
-  hbar('Kipörgés', slip, slip > 0.15 and U.col.orange or U.col.dim, c.width, c.labelW, c.k,
-    string.format('%.0f%%', slip * 100))
-  if c.big then
-    U.text(string.format('Hajtott kerekek: %.0f km/h  ·  a talajon: %.0f km/h  ·  különbség: %+.0f km/h', surf * 3.6, ground * 3.6, (surf - ground) * 3.6), 12 * c.k, U.col.dim)
-  end
+  -- (0.3.14: the wheelspin bar is gone – the client found it wrong on the HUD, D26; the recording still
+  -- keeps the driven-wheel slip „dslip” for analysis)
 end
 drawers.zone = function(c)
   if c.live.activeZone then U.text('Zóna: ' .. c.live.activeZone, 15 * c.k, U.col.purple, true) end
@@ -290,6 +278,20 @@ function Live.drawDetails(app, width, big, k)
     if m.on and drawers[m.key] then drawers[m.key](ctx) end
   end
   return live
+end
+
+-- Spectating / following a car with the camera (0.3.14): whose run is shown.
+function Live.watchedName(app)
+  local idx = app.watchedCar
+  if not idx or idx == 0 then return nil end
+  local ok, n = pcall(ac.getDriverName, idx)
+  return ok and n and n ~= '' and n or ('autó #' .. tostring(idx))
+end
+function Live.drawWatched(app, k)
+  local n = Live.watchedName(app)
+  if not n then return end
+  U.text('Néző mód – ' .. n, 13 * (k or 1), U.col.purple, true)
+  U.tip('A program azt az autót pontozza és mutatja, amelyiket a kamera követ. Ez az eredmény tájékoztató: a hivatalos pontot a pilóta saját programja küldi (Versenyzők fül). Beállítások → Figyelt autó.')
 end
 
 -- Élő tab ---------------------------------------------------------------------------------------------
@@ -357,6 +359,7 @@ local blockSub = {
 
 function Live.drawTab(app)
   local live = app.judge and app.judge:live() or { state = 'idle' }
+  Live.drawWatched(app, 1.1)
   U.text(stateNames[live.state] or live.state, 15, stateColors[live.state] or U.col.text, true)
   if live.zeroReasons and #live.zeroReasons > 0 then
     ui.sameLine(0, 12)
@@ -391,6 +394,7 @@ function Live.drawHud(app)
   end
   local k = type(ui_.hudScale) == 'number' and geom.clamp(ui_.hudScale, 0.75, 1.5) or 1
   local w = math.max(160, ui.availableSpaceX())
+  Live.drawWatched(app, k)
   Live.drawDetails(app, w, false, k)
   if not visibility.masterOn(app.settings) then
     U.text('Pályarajz: KI' .. (app.hotkeyText and ('  (' .. app.hotkeyText('zones') .. ')') or ''), 12 * k, U.col.dim)

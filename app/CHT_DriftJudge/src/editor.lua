@@ -960,7 +960,9 @@ local function paintPanel()
 end
 
 local function zoneList(zoneIss)
-  paintPanel()
+  -- D20 (CHT, 2026-11-26): zone from the paint is not needed – the tool stays, but only shows when it is
+  -- switched on in Beállítások → Megjelenés (or a detection is in progress)
+  if app.settings.ui.showPaintTool == true or (paint.status and paint.status ~= 'idle') then paintPanel() end
   weightPanel()
   U.text('Új zóna:', 13, U.col.dim)
   for _, t in ipairs(layoutMod.zoneTypes) do
