@@ -384,7 +384,15 @@ function S.serverInfo(app)
     local lay = r.state == 'ok' and ('letöltve: ' .. tostring(r.active)) or (r.state == 'loading' and 'letöltés…')
       or (r.state == 'error' and ('nem sikerült: ' .. tostring(r.error))) or '–'
     row('Pályaterv a szerverről', lay, r.state == 'error' and U.col.orange or nil)
-    row('Telepített app ezen a gépen', app.passive and 'fut – az online változat ezért csendben marad' or 'nem fut')
+    local inst = platform.installedAppVersion()
+    local old = platform.oldInstalledApp()
+    local instText
+    if app.passive then instText = 'fut – az online változat ezért csendben marad'
+    elseif old then instText = 'régi változat (' .. (old == '?' and 'ismeretlen' or ('v' .. old)) .. ') – két program fut egyszerre, nevezd át a mappáját'
+    elseif inst then instText = 'v' .. tostring(inst) .. ' telepítve, most nem fut'
+    elseif inst == false then instText = 'nincs telepítve'
+    else instText = 'nem fut (azt, hogy telepítve van-e, ez a CSP nem mutatja meg)' end
+    row('Telepített app ezen a gépen', instText, old and U.col.orange or nil)
   end
   if N then
     row('Üzenetek a szerveren', N.available() and 'működnek (AssettoServer)' or 'nem érhetők el (Kunos szerver vagy offline)', N.available() and U.col.green or U.col.dim)
@@ -402,6 +410,11 @@ function S.serverInfo(app)
       if U.button('Pályaterv újratöltése a szerverről##reloadSrv', 0, false, 'Újra letölti a pályatervet a szerver GitHub-mappájából, és azt használja.') then
         app.loadServerLayouts(true)
       end
+      if ui.checkbox('Indítógomb a képernyő tetején, amíg a fő ablak zárva van##launcherOn', app.settings.ui.onlineLauncher ~= false) then
+        if app.settings.ui.onlineLauncher == false then app.settings.ui.onlineLauncher = nil else app.settings.ui.onlineLauncher = false end
+        app.saveSettings()
+      end
+      U.tip('A kis „CHT Drift Judge” gomb a képernyő tetején: kattintásra megnyitja a fő ablakot. Kikapcsolva a fő ablak a ' .. app.hotkeyText('main') .. ' gyorsbillentyűvel nyílik.')
     end
   end)
 end

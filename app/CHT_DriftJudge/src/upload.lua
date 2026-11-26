@@ -180,6 +180,7 @@ local function caps()
       sendResults = platform.server.sendResults, judges = platform.server.judges ~= '' and 'van' or 'nincs',
     } or nil,
     remoteLayout = app.remote and { state = app.remote.state, active = app.remote.active, error = app.remote.error } or nil,
+    installedApp = platform.online and platform.installedAppVersion() or nil,
   }
 end
 

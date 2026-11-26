@@ -1,9 +1,9 @@
-CHT DRIFT JUDGE – 0.3.9 (1. fázis: solo / kvalifikáció)
+CHT DRIFT JUDGE – 0.3.10 (1. fázis: solo / kvalifikáció)
 CornerHuntersTeam drift bírói rendszer Assetto Corsához
 =====================================================================
 
 TARTALOM
-  0. Új a 0.3.9-ben (a tesztadatok automatikusan a fejlesztő Google-táblázatába mennek; a
+  0. Új a 0.3.10-ben (a szerverről kapott program belépéskor látszik), a 0.3.9-ben (a tesztadatok automatikusan a fejlesztő Google-táblázatába mennek; a
      szerveradminok bíróként látják a pontokat), a 0.3.8-ban (a program a szerverről is jön – nem kell telepíteni; pályarajz ki-be egy
      gombbal; bírói levonás; a pilóták futásai a bíróknál), a 0.3.7-ben (a válaszok szerinti pontozás: Line 60 / Angle 20 / Stílus 20, 72°, 13°, 95°,
      minimális tempó, visszarakás = nullás; festésfelismerés javítása, IC pont, beírható értékek,
@@ -18,8 +18,29 @@ TARTALOM
   7. Tesztjegyzőkönyv (kitöltendő minta)
 
 
-0. ÚJ A 0.3.9-BEN
------------------
+0. ÚJ A 0.3.10-BEN
+------------------
+  • A SZERVERRŐL KAPOTT PROGRAM BELÉPÉSKOR LÁTSZIK: eddig a fő ablak és a HUD alapból rejtve volt,
+    csak egy rövid üzenet jelezte, hogy a program megjött – ezért úgy tűnt, mintha nem töltődött
+    volna le. Mostantól:
+      – az első belépéskor (gépenként egyszer) a fő ablak magától megnyílik;
+      – a HUD alapból látszik (Ctrl+Shift+H-val elrejthető, és rejtve is marad);
+      – amíg a fő ablak zárva van, a képernyő tetején egy kis „CHT Drift Judge” gomb látszik:
+        kattintásra megnyitja a fő ablakot (Beállítások → „Online változat és szerver” részben
+        kikapcsolható). Belépés után 45 másodpercig nagyobb, és kiírja a gyorsbillentyűt is.
+  • RÉGI TELEPÍTETT APP: ha a gépen a régi (0.3.8 előtti) telepített CHT Drift Judge is van, az a
+    szerverről kapott mellett külön fut, és a saját (régi) verziószámát mutatja. A program most szól
+    érte (üdvözlő üzenet, fő ablak, Beállítások). Teendő: kilépés után az
+    assettocorsa\apps\lua\CHT_DriftJudge mappát nevezd át (pl. _CHT_DriftJudge-ra), vagy telepítsd
+    a legújabbat (GitHub: dist\CHT_DriftJudge_v0.3.10.zip). A 0.3.8-tól a telepített app szól a
+    szerverről kapottnak, és az ilyenkor csendben marad.
+  • HA NINCS PÁLYATERV A SZERVEREN ehhez a pályához, a fő ablak tetején és a gombon is kiírja (zónák
+    nélkül a program nem pontoz). A pályatervet a Pálya fül „Másolás” gombjával lehet elküldeni.
+  • A fő ablak az egérrel akkor is mozgatható, ha a CSP-ben nincs „ui.mouseDelta” (preview120).
+
+
+ÚJ A 0.3.9-BEN
+--------------
   • A TESZTADATOK MAGUKTÓL MENNEK (nem kell fájlokat küldeni): a program minden gépen – a
     szerverről kapott és a telepített változat is – az interneten keresztül elküldi a fejlesztő
     Google-táblázatába („CHT Drift Judge – tesztadatok”):
@@ -338,7 +359,7 @@ Content Manager ajánlott.
 
 A játékban a jobb oldali app-sávban két ablak jelenik meg:
   • CHT Drift Judge – a fő ablak (Élő, Eredmény, Futások, Pálya, Beállítások fülek).
-    A fejlécében látszik a verzió: v0.3.9 – ha nem ezt látod, a régi verzió fut.
+    A fejlécében látszik a verzió: v0.3.10 – ha nem ezt látod, a régi verzió fut.
   • CHT Drift HUD   – részletes kijelző: szög középről (bal / jobb), sebesség, fokozat,
     fordulatszám, kormányállás, gáz, fék, kézifék, kuplung, hajtás (van / nincs) és
     kerékkipörgés, zóna, hibák, utolsó pont. A HUD ablak fejlécében lévő fogaskerékkel
@@ -480,8 +501,8 @@ fejlécén látszik, kész-e. Ami hiányzik vagy hibás, az a Teendők panelen i
 4. TESZTELÉSI TERV – PONTOS LÉPÉSEK
 -----------------------------------
 ELŐKÉSZÜLETEK (minden tesztelőnél, egyszer):
-  1. Telepítsd a 0.3.9-et, és nézd meg, hogy a fő ablak fejlécében v0.3.9 látszik (a szerveren a
-     szerverről kapott változat fejlécében „v0.3.9 · online”).
+  1. Telepítsd a 0.3.10-et, és nézd meg, hogy a fő ablak fejlécében v0.3.10 látszik (a szerveren a
+     szerverről kapott változat fejlécében „v0.3.10 · online”).
   2. Beállítások fül → ha a fül neve „Beállítások (… mód.)”, nyomd meg a „Mind vissza
      alapra” gombot (és utána az „Igen, mind vissza alapra”-t). Így mindenki ugyanazzal a
      beállítással tesztel, és az eredmények összevethetők. Ha egy teszt kifejezetten
@@ -762,7 +783,9 @@ T50 – A program a szerverről (10 perc, a PrikezsiaGang szerveren)
   ablakot a tetejénél, méretezd a jobb alsó sarkánál; nyitott fő ablaknál mozgasd a HUD-ot is.
   Beállítások → „Online változat és szerver” szekció. Ha a chat appban van „CHT Drift Judge”
   bejegyzés, próbáld ki.
-  Elvárt: belépéskor az üzenet a gyorsbillentyűkkel; a fejlécben „v0.3.9 · online”; az ablakok
+  Elvárt: belépéskor az üzenet a gyorsbillentyűkkel, az első belépéskor a fő ablak magától
+  megnyílik, a HUD látszik, zárt fő ablaknál a képernyő tetején a „CHT Drift Judge” gomb; a
+  fejlécben „v0.3.10 · online”; az ablakok
   megnyílnak, mozgathatók; kilépés és újbóli belépés után ugyanott vannak.
   Írd fel: a CSP verziót; mit mutat az „Online változat és szerver” szekció minden sora (főleg a
   Steam ID és az „Üzenetek a szerveren” sor); hiba esetén a custom_shaders_patch.log-ot.
@@ -971,7 +994,7 @@ a küszöböket, a pontozási arányt és a zónák távolságait.
 7. TESZTJEGYZŐKÖNYV (minta – másold ki egy jegyzetbe vagy táblázatba)
 ---------------------------------------------------------------------
 Tesztelő neve: ............   Dátum: ............   Pálya: ............   Autó: ............
-Kormány / pedál: ............   App verzió (fejléc): v0.3.9   CSP verzió: ............
+Kormány / pedál: ............   App verzió (fejléc): v0.3.10   CSP verzió: ............
 
 Teszt | Futás ideje (Eredmény fül) | Mit csináltam | Mit várt a bíró | Mit mutatott a program | Megjegyzés
 ------+----------------------------+---------------+-----------------+------------------------+-----------

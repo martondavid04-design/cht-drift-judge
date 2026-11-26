@@ -110,7 +110,7 @@ def app_mode():
     check(not errors(g), 'nincs hiba a naplóban')
 
 
-def online_base(server_config=None, steam_id=None, with_layout=True, extras=False, storage=None):
+def online_base(server_config=None, steam_id=None, with_layout=True, extras=False, storage=None, prepare=None):
     L, g, stub = runtime(online=True, steam_id=steam_id, online_extras=extras)
     if storage:
         for k, v in storage.items():
@@ -123,6 +123,8 @@ def online_base(server_config=None, steam_id=None, with_layout=True, extras=Fals
         base = 'https://raw.githubusercontent.com/martondavid04-design/cht-drift-judge/main/layouts/'
         stub.webResponses[base + scenarios.TRACK_KEY + '/Teszt.json'] = json.dumps(scenarios.LAYOUT)
         stub.webResponses[base + scenarios.TRACK_KEY + '/index.json'] = json.dumps(['Teszt'])
+    if prepare:
+        prepare(stub)
     load_online(L, g)
     for _ in range(5):
         stub.frameStep(1 / 60)
@@ -141,12 +143,18 @@ def online_mode():
     extras = lua_list(stub.onlineExtras)
     check(len(extras) == 1 and extras[0].title == 'CHT Drift Judge', 'bejegyzés a CSP chat app menüjében')
     extras[0].ui()
-    # main window + HUD by hotkey
-    stub.keyPressed['__CHT_DRIFT_JUDGE_MAIN'] = True
-    stub.keyPressed['__CHT_DRIFT_JUDGE_HUD'] = True
-    stub.frameStep(1 / 60)
-    stub.keyPressed['__CHT_DRIFT_JUDGE_MAIN'] = False
-    stub.keyPressed['__CHT_DRIFT_JUDGE_HUD'] = False
+    # main window + HUD by hotkey (0.3.10: both are open after the first join, so the first press closes them)
+    def press_both():
+        stub.keyPressed['__CHT_DRIFT_JUDGE_MAIN'] = True
+        stub.keyPressed['__CHT_DRIFT_JUDGE_HUD'] = True
+        stub.frameStep(1 / 60)
+        stub.keyPressed['__CHT_DRIFT_JUDGE_MAIN'] = False
+        stub.keyPressed['__CHT_DRIFT_JUDGE_HUD'] = False
+    if not (app.onlineUI.main is True and app.onlineUI.hud is True):
+        press_both()
+    else:
+        press_both()
+        press_both()
     check(app.onlineUI.main is True and app.onlineUI.hud is True, 'Ctrl+Shift+D / Ctrl+Shift+H megnyitja a fő ablakot és a HUD-ot')
     for _ in range(3):
         stub.frameStep(1 / 60)

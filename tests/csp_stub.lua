@@ -199,7 +199,11 @@ local function parent(p) return norm(p):match('^(.*)/[^/]*$') end
 local realIO = io
 if __STUB_ONLINE then
   -- online scripts have no file access (SDK flag withoutIO): only a few harmless functions exist
-  io = { load = function() return nil end }
+  -- (io.load can read some files; STUB.installedManifest = text of apps/lua/CHT_DriftJudge/manifest.ini)
+  io = { load = function(p, fb)
+    if STUB.installedManifest and norm(p):find('/lua/CHT_DriftJudge/manifest.ini', 1, true) then return STUB.installedManifest end
+    return fb
+  end }
 else
   io = {
     save = function(p, data) __FS[norm(p)] = tostring(data) return true end,
@@ -427,7 +431,19 @@ function ui.button(label)
   end
   return false
 end
-ui.invisibleButton = function() return false end
+-- STUB.uiPress also presses invisible buttons; STUB.uiActive = label substring → ui.itemActive() is true
+-- right after that item (dragging)
+local lastItem = ''
+ui.invisibleButton = function(label)
+  lastItem = tostring(label)
+  for k in pairs(STUB.uiPress) do
+    if lastItem:find(k, 1, true) then STUB.uiPress[k] = nil return true end
+  end
+  return false
+end
+STUB.uiActive = nil
+function ui.itemActive() return STUB.uiActive ~= nil and lastItem:find(STUB.uiActive, 1, true) ~= nil end
+STUB.mouse = vec2(0, 0)
 function ui.slider(_, v) return v, false end
 function ui.inputText(_, v) return v, false, false end
 function ui.combo(_, _, _, fn) end
@@ -449,7 +465,7 @@ function ui.measureDWriteText(t, size) return vec2(#tostring(t) * (size or 14) *
 function ui.itemRectMax() return vec2(100, 20) end
 function ui.itemRectMin() return vec2(0, 0) end
 function ui.imageSize() return vec2(0, 0) end
-function ui.mousePos() return vec2(0, 0) end
+function ui.mousePos() return vec2(STUB.mouse.x, STUB.mouse.y) end
 function ui.mouseDelta() return vec2(0, 0) end
 function ui.decodeImage() return nil end
 function ui.toast(icon, msg) STUB.toasts[#STUB.toasts + 1] = msg return { button = function() end } end

@@ -42,6 +42,9 @@ fogadó script: `tools/gsheet_collector.gs` (a közzétett változatban van az o
 A programban lévő írókulccsal csak sort lehet hozzáadni, olvasni nem.
 
 A játékban: **Ctrl+Shift+D** fő ablak, **Ctrl+Shift+H** HUD, **Ctrl+Shift+Z** pályarajz ki-be.
+Az első belépéskor a fő ablak magától megnyílik, a HUD alapból látszik, és amíg a fő ablak zárva van, a
+képernyő tetején egy kis „CHT Drift Judge” gomb nyitja meg. Ha a gépen régi (0.3.8 előtti) telepített
+változat is van, a program szól (a kettő egyszerre futna).
 A szerverről kapott változat nem ment fájlt (a CSP nem engedi); a beállítások és a pályaterv a CSP
 saját tárolójában maradnak meg. A változtatás a szerver újraindítása után él.
 

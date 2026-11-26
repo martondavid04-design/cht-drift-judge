@@ -3,7 +3,7 @@
 -- The same code runs as an installed Lua app (apps/lua/CHT_DriftJudge) and as an online script that the
 -- server sends to every player (one bundled file from GitHub, see tools/build.py and src/platform.lua).
 
-local APP_VERSION = '0.3.9'
+local APP_VERSION = '0.3.10'
 
 local config = require('src/config')
 local layoutMod = require('src/layout')
@@ -463,18 +463,34 @@ if platform.online then app.loadServerLayouts(false) end
 -- Main loop ----------------------------------------------------------------------------------------
 
 -- Online windows state (the installed app has real app windows from manifest.ini)
-local onlineUI = { main = false, hud = false, welcomed = false }
+local onlineUI = { main = false, hud = false, welcomed = false, joinedAt = nil, opened = {} }
 app.onlineUI = onlineUI
+
+-- How the windows were opened goes to the test sheet once per way (do the hotkeys work on that PC?).
+local function noteOpened(what, source)
+  local k = what .. '|' .. source
+  if onlineUI.opened[k] then return end
+  onlineUI.opened[k] = true
+  upload.debug('info', 'megnyitás', what .. ': ' .. source)
+end
+
+function app.setOnlineMain(on, source)
+  onlineUI.main = on == true
+  if onlineUI.main then noteOpened('fő ablak', source or '?') end
+end
+
+function app.setOnlineHud(on, source)
+  onlineUI.hud = on == true
+  app.settings.ui.onlineHud = onlineUI.hud
+  app.saveSoon()
+  if onlineUI.hud then noteOpened('HUD', source or '?') end
+end
 
 local function hotkeys()
   if controls.pressed('zones') then app.toggleTrackDraw() end
   if platform.online then
-    if controls.pressed('main') then onlineUI.main = not onlineUI.main end
-    if controls.pressed('hud') then
-      onlineUI.hud = not onlineUI.hud
-      app.settings.ui.onlineHud = onlineUI.hud
-      app.saveSoon()
-    end
+    if controls.pressed('main') then app.setOnlineMain(not onlineUI.main, 'gyorsbillentyű') end
+    if controls.pressed('hud') then app.setOnlineHud(not onlineUI.hud, 'gyorsbillentyű') end
   end
 end
 
@@ -906,10 +922,21 @@ local function clampWindow(x, y, w, h)
   return x, y, w, h
 end
 
+-- Mouse movement since the last frame. Some CSP versions (e.g. 0.3.0-preview120 for online scripts)
+-- have no ui.mouseDelta, then it is worked out from ui.mousePos() of this and the previous frame.
+local prevMouse, curMouse = nil, nil
+local function trackMouse()
+  local ok, p = pcall(ui.mousePos)
+  prevMouse = curMouse
+  curMouse = (ok and p and p.x and p.x >= 0) and { p.x, p.y } or nil
+end
+
 local function mouseDelta()
-  if type(ui.mouseDelta) ~= 'function' then return 0, 0 end
-  local ok, d = pcall(ui.mouseDelta)
-  if ok and d then return d.x or 0, d.y or 0 end
+  if type(ui.mouseDelta) == 'function' then
+    local ok, d = pcall(ui.mouseDelta)
+    if ok and d then return d.x or 0, d.y or 0 end
+  end
+  if prevMouse and curMouse then return curMouse[1] - prevMouse[1], curMouse[2] - prevMouse[2] end
   return 0, 0
 end
 
@@ -965,18 +992,78 @@ local function onlineWindow(opts, content)
   return closed
 end
 
+local function oldAppText(v)
+  return string.format('A gépeden a régi, telepített CHT Drift Judge (%s) is fut, ezért két program fut egyszerre. '
+    .. 'Lépj ki a játékból, és nevezd át a mappát: assettocorsa\\apps\\lua\\CHT_DriftJudge → _CHT_DriftJudge '
+    .. '(vagy telepítsd a legújabbat a GitHubról).', v == '?' and 'ismeretlen verzió' or ('v' .. v))
+end
+
 local function welcome()
   if onlineUI.welcomed then return end
   onlineUI.welcomed = true
-  onlineUI.hud = app.settings.ui.onlineHud == true
+  onlineUI.joinedAt = os.clock()
+  -- the HUD shows by default (until switched off once); the very first time on this PC the main window
+  -- opens by itself too, so nobody thinks the program did not arrive
+  onlineUI.hud = app.settings.ui.onlineHud ~= false
+  if onlineUI.hud then noteOpened('HUD', 'alapból') end
+  if not app.settings.ui.onlineIntroDone then
+    app.settings.ui.onlineIntroDone = APP_VERSION
+    app.saveSoon()
+    app.setOnlineMain(true, 'első belépés')
+  end
+  local old = platform.oldInstalledApp()
+  pcall(upload.debug, 'info', 'betöltés', 'online ' .. APP_VERSION .. ' betöltve', {
+    mouseDelta = type(ui.mouseDelta), mousePos = type(ui.mousePos), toolWindow = type(ui.toolWindow),
+    transparentWindow = type(ui.transparentWindow), toast = type(ui.toast), installedApp = platform.installedAppVersion(),
+    hotkeys = { main = app.hotkeyText('main'), hud = app.hotkeyText('hud'), zones = app.hotkeyText('zones') },
+    firstJoin = onlineUI.main,
+  })
+  if old then status(oldAppText(old), U.col.orange, 30) end
   if not platform.flag('showWelcome') then return end
   local text = string.format('CHT Drift Judge %s betöltve a szerverről. Fő ablak: %s, HUD: %s, pályarajz ki-be: %s.',
     APP_VERSION, app.hotkeyText('main'), app.hotkeyText('hud'), app.hotkeyText('zones'))
-  local ok = false
+  if old then text = text .. ' Figyelem: a régi telepített változat is fut a gépeden – lásd a fő ablakot.' end
   if type(ui.toast) == 'function' then
-    ok = pcall(ui.toast, ui.Icons and (ui.Icons.Info or ui.Icons.Settings) or nil, text)
+    pcall(ui.toast, ui.Icons and (ui.Icons.Info or ui.Icons.Settings) or nil, text)
   end
-  if not ok then status(text, U.col.green, 12) end
+  if not old then status(text, U.col.green, 15) end
+end
+
+-- A small button at the top of the screen while the main window is closed: shows that the program is
+-- there and opens it with a click. The first 45 s after joining it is bigger and tells the hotkey (and
+-- warns if an old installed app also runs, or there is no layout for this track on the server).
+local function launcher()
+  if onlineUI.main or app.settings.ui.onlineLauncher == false then return end
+  local sw = screenSize()
+  local fresh = onlineUI.joinedAt ~= nil and os.clock() - onlineUI.joinedAt < 45
+  local old = platform.oldInstalledApp()
+  local noLayout = app.remote and app.remote.state == 'error'
+  local lines = {}
+  if fresh then
+    lines[#lines + 1] = { string.format('CHT Drift Judge %s – kattints ide, vagy %s', APP_VERSION, app.hotkeyText('main')), U.col.text, true }
+    if old then lines[#lines + 1] = { 'Figyelem: a régi telepített változat is fut – lásd a fő ablakot', U.col.orange } end
+    if noLayout then lines[#lines + 1] = { 'Ehhez a pályához nincs pályaterv a szerveren – zónák nélkül nem pontoz', U.col.orange } end
+  else
+    lines[#lines + 1] = { 'CHT Drift Judge  ▸  ' .. app.hotkeyText('main'), U.col.text, true }
+    if old then lines[#lines + 1] = { 'régi telepített app is fut!', U.col.orange } end
+  end
+  local w = fresh and 470 or 220
+  local h = 10 + #lines * 19
+  local x = math.floor(sw / 2 - w / 2)
+  ui.transparentWindow('chtOnlineLauncher', vec2(x, 6), vec2(w, h), true, true, function()
+    local hovered = false
+    ui.setCursorX(0)
+    ui.setCursorY(0)
+    if ui.invisibleButton('##chtLauncherBtn', vec2(w, h)) then app.setOnlineMain(true, 'indítógomb') end
+    hovered = ui.itemHovered()
+    ui.drawRectFilled(vec2(0, 0), vec2(w, h), rgbm(0.05, 0.06, 0.08, hovered and 0.92 or 0.78), 6)
+    ui.drawRect(vec2(0, 0), vec2(w, h), hovered and rgbm(0.95, 0.55, 0.15, 1) or rgbm(1, 1, 1, 0.18), 6)
+    for i, l in ipairs(lines) do
+      ui.setCursorX(10)
+      ui.setCursorY(5 + (i - 1) * 19)
+      U.text(l[1], 13, l[2], l[3])
+    end
+  end)
 end
 
 -- Chat app menu entry (CSP's online extras), when this CSP version has it.
@@ -984,10 +1071,8 @@ local function registerExtras()
   if type(ui.registerOnlineExtra) ~= 'function' then return end
   pcall(ui.registerOnlineExtra, ui.Icons and (ui.Icons.Settings or ui.Icons.Info) or nil, 'CHT Drift Judge', function() return not app.passive end, function()
     U.text('CHT Drift Judge ' .. APP_VERSION, 15, U.col.text, true)
-    if U.button(onlineUI.main and 'Fő ablak bezárása' or 'Fő ablak megnyitása', 180) then onlineUI.main = not onlineUI.main end
-    if U.button(onlineUI.hud and 'HUD elrejtése' or 'HUD megjelenítése', 180) then
-      onlineUI.hud = not onlineUI.hud; app.settings.ui.onlineHud = onlineUI.hud; app.saveSoon()
-    end
+    if U.button(onlineUI.main and 'Fő ablak bezárása' or 'Fő ablak megnyitása', 180) then app.setOnlineMain(not onlineUI.main, 'chat menü') end
+    if U.button(onlineUI.hud and 'HUD elrejtése' or 'HUD megjelenítése', 180) then app.setOnlineHud(not onlineUI.hud, 'chat menü') end
     if U.button(visibility.masterOn(app.settings) and 'Pályarajz kikapcsolása' or 'Pályarajz bekapcsolása', 180) then app.toggleTrackDraw() end
     U.text(string.format('Gyorsbillentyűk: fő ablak %s · HUD %s · pályarajz %s', app.hotkeyText('main'), app.hotkeyText('hud'), app.hotkeyText('zones')), 12, U.col.dim)
   end, nil, ui.OnlineExtraFlags and ui.OnlineExtraFlags.Tool or nil)
@@ -999,7 +1084,9 @@ if platform.online then
   function script.drawUI()
     if app.passive or uiErrors > 20 then return end
     local ok, err = pcall(function()
+      trackMouse()
       welcome()
+      launcher()
       if onlineUI.hud then
         onlineWindow({ id = 'chtOnlineHud', title = 'CHT Drift HUD', posKey = 'onlineHudPos', sizeKey = 'onlineHudSize',
           defPos = { 30, 220 }, defSize = { 260, 420 }, transparent = true,
@@ -1011,6 +1098,13 @@ if platform.online then
         local closed = onlineWindow({ id = 'chtOnlineMain', title = 'CHT Drift Judge – szerverről (online)', posKey = 'onlineMainPos',
           sizeKey = 'onlineMainSize', defPos = { math.max(0, sw / 2 - 490), 80 }, defSize = { 980, 760 },
           resizable = true, closable = true, hotkey = app.hotkeyText('main') }, function()
+          local old = platform.oldInstalledApp()
+          if old then U.wrapped(oldAppText(old), 13, U.col.orange, true) end
+          if app.remote and app.remote.state == 'error' then
+            U.wrapped(string.format('Ehhez a pályához (%s) nincs pályaterv a szerveren (%s), ezért nincsenek zónák, és a program nem pontoz. '
+              .. 'A Pálya fülön lehet készíteni egyet (ezen a gépen megmarad), vagy küldjétek el a meglévőt (Pálya fül → Másolás), és felkerül a szerverre.',
+              ac.getTrackFullID('/'), tostring(app.remote.error)), 12, U.col.orange)
+          end
           ui.childWindow('##onlineMainBody', vec2(ui.availableSpaceX(), ui.availableSpaceY()), false, ui.WindowFlags.None, function()
             script.windowMain(0)
           end)

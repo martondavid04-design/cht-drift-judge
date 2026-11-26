@@ -96,4 +96,48 @@ end
 
 P.canWriteFiles = not P.online
 
+-- Version numbers: '0.3.10' > '0.3.9' (compared part by part as numbers).
+function P.versionLess(a, b)
+  local pa, pb = {}, {}
+  for n in tostring(a or ''):gmatch('%d+') do pa[#pa + 1] = tonumber(n) end
+  for n in tostring(b or ''):gmatch('%d+') do pb[#pb + 1] = tonumber(n) end
+  for i = 1, math.max(#pa, #pb) do
+    local x, y = pa[i] or 0, pb[i] or 0
+    if x ~= y then return x < y end
+  end
+  return false
+end
+
+-- Online: is the installed app (apps/lua/CHT_DriftJudge) also on this PC, and which version?
+-- Returns the version string, false (not installed) or nil (this CSP does not let the online script look).
+-- Installed 0.3.8+ tells the online copy that it runs (src/netsync.lua presence), older ones do not –
+-- then both would run, so the online copy warns about it.
+local installedChecked, installedVersion = false, nil
+function P.installedAppVersion()
+  if installedChecked then return installedVersion end
+  installedChecked = true
+  local ok, v = pcall(function()
+    if type(io) ~= 'table' or type(io.load) ~= 'function' or type(ac.getFolder) ~= 'function' then return nil end
+    local apps = ac.getFolder(ac.FolderID and ac.FolderID.ACApps or 23)
+    if type(apps) ~= 'string' or apps == '' then return nil end
+    local text = io.load(apps .. '/lua/CHT_DriftJudge/manifest.ini')
+    if type(text) ~= 'string' or text == '' then
+      if type(io.dirExists) == 'function' and io.dirExists(apps .. '/lua/CHT_DriftJudge') then return '?' end
+      return false
+    end
+    return text:match('VERSION%s*=%s*([%w%.%-]+)') or '?'
+  end)
+  installedVersion = ok and v or nil
+  return installedVersion
+end
+
+-- Online: an installed app that runs next to us without telling it (older than 0.3.8, or unknown).
+function P.oldInstalledApp()
+  if not P.online then return nil end
+  local v = P.installedAppVersion()
+  if not v then return nil end
+  if v == '?' or P.versionLess(v, '0.3.8') then return v end
+  return nil
+end
+
 return P
