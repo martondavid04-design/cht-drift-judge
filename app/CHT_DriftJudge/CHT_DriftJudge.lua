@@ -3,7 +3,7 @@
 -- The same code runs as an installed Lua app (apps/lua/CHT_DriftJudge) and as an online script that the
 -- server sends to every player (one bundled file from GitHub, see tools/build.py and src/platform.lua).
 
-local APP_VERSION = '0.3.14'
+local APP_VERSION = '0.3.15'
 
 local callable = require('src/fn').callable
 local config = require('src/config')
@@ -26,6 +26,7 @@ local platform = require('src/platform')
 local controls = require('src/controls')
 local netsync = require('src/netsync')
 local Drivers = require('src/ui_drivers')
+local roles = require('src/roles')
 local upload = require('src/upload')
 
 local app = {
@@ -448,6 +449,9 @@ editor.init(app)
 telemetry.watchJumps(0)
 netsync.init(app)
 upload.init(app)
+roles.init(app)
+app.roles = roles
+netsync.onRolePing = roles.onPing
 if rawget(_G, '__STUB') then _G.__CHT_APP = app end -- offline smoke tests only
 
 -- Shared layouts (everyone gets the same ones) -------------------------------------------------------
@@ -710,10 +714,12 @@ end
 local function updateFrame(dt)
   local sim = ac.getSim()
   updatePassive()
+  netsync.update()   -- hello with this PC's Steam ID (also while passive: only the online script knows it)
   if app.passive then return end
   hotkeys()
   platform.updateAdmin()
   upload.update()
+  roles.update()
   storage.webTick()
   if statusUntil > 0 and now() > statusUntil then app.statusMessage, statusUntil = nil, 0 end
   if sim.isReplayActive or sim.isPaused or sim.dt <= 0 then return end

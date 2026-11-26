@@ -81,6 +81,22 @@ Pályát offline, a telepített appal lehet készíteni (egyjátékos mód), és
   a pilóta nevében; a tesztadatokban „futás (néző gépén)” címkével megy, `judgedBy` mezővel. Hiányzó
   kerékadatnál (távoli autó) a kerék helye becsült, a felülete nem számít (`wfb` mező a felvételben).
 
+## Szerepek a szerveren (0.3.15)
+
+- Minden gép, amin az online script fut, elküldi a saját Steam ID-ját (`cht.driftjudge.hello.v1`);
+  a szerveradmin a Versenyzők fülön Pilóta / Bíró / Közvetítő szerepet ad (`src/roles.lua`). A szerep
+  a táblázat Szerepek lapjára kerül, a gépek `?action=roles`-szal olvassák (csak a Steam ID
+  ujjlenyomata megy ki), a változás után `cht.driftjudge.role.v1` jelzés. Sorrend: a szerver
+  `judges` / `broadcasters` listája → kijelölt szerep → szerveradmin.
+
+## Adattáblázat (0.3.15-től a 2.)
+
+- `tools/gsheet_collector.gs` + `tools/appsscript.json`: a „CHT Drift Judge – adatok (2)” táblázat
+  scriptje. A futások felvétele gzip fájlként a Drive „CHT Drift Judge – felvételek” mappájába megy
+  (csak a script által létrehozott fájlokhoz fér hozzá: `drive.file`), a táblázatban rövid sorok. Az
+  első táblázat 2026-11-26-án megtelt és csak olvasható lett; az adatait az `atvetel()` hozta át, a
+  régi felvételeket a script a régi webappból olvassa.
+
 ## Pályatervek
 
 `layouts/<pálya kulcsa>/<név>.json` (és opcionálisan `layouts/<pálya kulcsa>/index.json`: a nevek
@@ -91,5 +107,5 @@ Pálya fülén a „Másolás” gombbal vihető ki.
 
 - `app/CHT_DriftJudge/` – a forrás (ugyanez fut telepítve és online)
 - `python3 tools/build.py` – elkészíti az `online/cht_drift_judge.lua` és a `dist/…zip` fájlt
-- `python3 tests/scenarios.py` és `python3 tests/smoke_038.py` … `smoke_0314.py` – offline tesztek CSP-csonkkal
+- `python3 tests/scenarios.py` és `python3 tests/smoke_038.py` … `smoke_0315.py` – offline tesztek CSP-csonkkal
   (`pip install lupa`)

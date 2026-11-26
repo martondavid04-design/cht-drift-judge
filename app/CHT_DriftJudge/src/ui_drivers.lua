@@ -152,6 +152,51 @@ local function copyTable(app, list)
   if app.status then app.status(string.format('Rangsor a vágólapon (%d pilóta).', place), U.col.green) end
 end
 
+-- Roles (0.3.15): who is a judge / broadcaster, and buttons for the server admin -----------------------
+local roleNames = { judge = 'Bíró', streamer = 'Közvetítő', admin = 'Szerveradmin' }
+
+local function steamOf(app, d)
+  if d.carIndex == 0 then return platform.steamID() end
+  local N = app.netsync
+  local p = N and N.peer and d.carIndex and N.peer(d.carIndex)
+  return p and p.steamId or nil
+end
+
+local function roleOf(app, d)
+  if d.carIndex == 0 then return platform.serverRole() end
+  local id = steamOf(app, d)
+  return id and app.roles and app.roles.roleOf(id) or nil
+end
+
+local function roleButtons(app, d)
+  local R = app.roles
+  if not (R and R.canAssign() and d.connected and d.carIndex ~= nil) then return end
+  local id = steamOf(app, d)
+  ui.sameLine(890)
+  if not id then
+    U.text('nem jelzett', 12, U.col.dim)
+    U.tip('Ettől a géptől még nem jött Steam ID: a program nem fut nála (vagy épp most lépett be – pár másodperc). Szerepet csak annak lehet adni, akinél fut a program.')
+    return
+  end
+  local cur = R.roleOf(id) or 'pilot'
+  for _, r in ipairs({ { 'pilot', 'Pilóta' }, { 'judge', 'Bíró' }, { 'streamer', 'Közvetítő' } }) do
+    local active = cur == r[1]
+    if U.button((active and '● ' or '') .. r[2] .. '##role_' .. r[1] .. '_' .. d.name, 0, active,
+      r[1] == 'pilot' and 'Pilóta: csak akkor látja a pontokat, ha a szerver engedi (pilotScores = 1).'
+      or (r[1] == 'judge' and 'Bíró: látja a pontokat és a Versenyzők fület, minden CHT szerveren, a következő belépéseknél is. A változás pár másodperc alatt megérkezik a gépére.'
+      or 'Közvetítő gép: látja a pontokat (a közvetítői HUD-hoz), minden CHT szerveren, a következő belépéseknél is.')) then
+      R.assign(d.carIndex, r[1], function(ok, err)
+        if app.status then
+          if ok then app.status(string.format('%s: %s – elmentve, a gépére is megy.', d.name, r[2]), U.col.green)
+          else app.status('A szerep nem ment el: ' .. tostring(err), U.col.orange) end
+        end
+      end)
+    end
+    ui.sameLine(0, 4)
+  end
+  ui.dummy(vec2(0, 0))
+end
+
 local function driverRuns(app, d)
   if #d.runs == 0 then
     U.text('Még nincs futása ezen a pályaterven.', 12, U.col.dim)
@@ -201,6 +246,9 @@ function D.drawTab(app)
   ui.sameLine(0, 16)
   if U.button('Másolás táblázatként##drvCopy', 0, withRuns == 0, 'A rangsor a vágólapra kerül (tabulátorral elválasztva): beilleszthető táblázatba, Challonge-ba, Discordra.') then copyTable(app, list) end
   filter = U.searchBox('drvFlt', 'Keresés: pilóta neve…', filter, 260)
+  if app.roles and app.roles.canAssign() then
+    U.wrapped('Szerveradminként itt jelölheted ki a bírókat és a közvetítő gépet (Pilóta / Bíró / Közvetítő): a program a Steam ID-t magától kezeli, és a választás minden CHT szerveren, a későbbi belépéseknél is megmarad. Szerepek: ' .. app.roles.stateText() .. '.', 12, U.col.dim)
+  end
   local judged = app.watchedCar
   local live = app.judge and app.judge.state ~= 'idle'
   ui.separator()
@@ -216,6 +264,8 @@ function D.drawTab(app)
         ui.sameLine(56)
         ui.text(d.name)
         if d.connected then ui.sameLine(); ui.textColored('●', U.col.green); U.tip('Most fent van a szerveren.') end
+        local role = roleOf(app, d)
+        if role then ui.sameLine(); U.pill(roleNames[role] or role, role == 'judge' and U.col.purple or U.col.cyan) end
         if judged ~= nil and d.carIndex == judged then
           ui.sameLine()
           ui.textColored(live and ' ▶ most fut (ezt pontozza ez a gép)' or ' ◉ ezt követi a kamera', U.col.purple)
@@ -237,6 +287,7 @@ function D.drawTab(app)
             pcall(ac.focusCar, d.carIndex)
           end
         end
+        roleButtons(app, d)
         if open then
           ui.offsetCursorX(20)
           ui.beginGroup()

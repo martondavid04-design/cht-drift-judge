@@ -1,9 +1,10 @@
-CHT DRIFT JUDGE – 0.3.14 (1. fázis: solo / kvalifikáció)
+CHT DRIFT JUDGE – 0.3.15 (1. fázis: solo / kvalifikáció)
 CornerHuntersTeam drift bírói rendszer Assetto Corsához
 =====================================================================
 
 TARTALOM
-  0. Új a 0.3.14-ben (Versenyzők fül a bíróknak, néző mód, nagyobb szerkesztőpontok), a 0.3.13-ban
+  0. Új a 0.3.15-ben (a bírókat az admin jelöli ki a játékban; új adattáblázat), a 0.3.14-ben
+     (Versenyzők fül a bíróknak, néző mód, nagyobb szerkesztőpontok), a 0.3.13-ban
      (javítás: gyorsbillentyűk, átméretezés), a 0.3.12-ben (pályaterv egy
      gombbal mindenkinek), a 0.3.11-ben (a pályatervek frissítéskor
      megmaradnak), a 0.3.10-ben (a szerverről kapott
@@ -16,14 +17,33 @@ TARTALOM
   1. Telepítés
   2. Pályaterv készítése
   3. Futás és eredmény
-  4. TESZTELÉSI TERV – pontos lépések (T01–T64)
+  4. TESZTELÉSI TERV – pontos lépések (T01–T66)
   5. Mit küldjetek vissza
   6. Alapbeállítások
   7. Tesztjegyzőkönyv (kitöltendő minta)
 
 
-0. ÚJ A 0.3.14-BEN
+0. ÚJ A 0.3.15-BEN
 ------------------
+  • BÍRÓK ÉS KÖZVETÍTŐ KIJELÖLÉSE A JÁTÉKBAN: a szerveradmin a Versenyzők fülön minden fent lévő
+    pilóta sorában a Pilóta / Bíró / Közvetítő gombbal ad szerepet. Steam ID-t nem kell gyűjteni:
+    minden gép, amin fut a program, belépéskor elküldi a többinek a saját Steam ID-ját. A szerep pár
+    másodperc alatt megérkezik a pilóta gépére, és megmarad a következő belépéseknél és minden CHT
+    szerveren (az adattáblázat Szerepek lapján: kit, ki, mikor jelölt ki). A Beállítások → „Online
+    változat és szerver” mutatja, honnan jön a szerep. A szerver judges / broadcasters listája
+    továbbra is működik, és erősebb.
+    Admin = a szerver paneljének Admins listáján lévő Steam ID (belépéskor automatikus), vagy a chatben
+    „/admin <adminjelszó>”.
+  • ÚJ ADATTÁBLÁZAT: az első Google-táblázat megtelt (a futások teljes felvétele a cellákban volt), és
+    a Google véglegesen csak olvashatóra állította – 2026-11-26 este óta semmi nem jutott el oda, a
+    „Feltöltés mindenkinek” sem. Az új táblázatba („CHT Drift Judge – adatok (2)”) átkerült minden
+    belépés, futás és hiba; a felvételek ezentúl külön fájlok egy Drive-mappában, így nem nő túl
+    újra. A szerverről kapott program magától az újat használja; a telepített appot frissíteni kell
+    (0.3.15 zip), különben a futásai nem jutnak el a táblázatba.
+
+
+ÚJ A 0.3.14-BEN
+---------------
   • VERSENYZŐK FÜL (bíróknak, közvetítőnek): pilótánként külön minden futás és pont – legjobb,
     második legjobb, futások száma, nullások. Rangsor: legjobb futás, aztán a második legjobb, aztán
     a legjobb futás Line / Angle / Stílus pontja (C13). A ▸ gomb kinyitja a pilóta futásait (pont,
@@ -117,7 +137,7 @@ JAVÍTÁS A 0.3.13-BAN
     szerverről kapott mellett külön fut, és a saját (régi) verziószámát mutatja. A program most szól
     érte (üdvözlő üzenet, fő ablak, Beállítások). Teendő: kilépés után az
     assettocorsa\apps\lua\CHT_DriftJudge mappát nevezd át (pl. _CHT_DriftJudge-ra), vagy telepítsd
-    a legújabbat (GitHub: dist\CHT_DriftJudge_v0.3.14.zip). A 0.3.8-tól a telepített app szól a
+    a legújabbat (GitHub: dist\CHT_DriftJudge_v0.3.15.zip). A 0.3.8-tól a telepített app szól a
     szerverről kapottnak, és az ilyenkor csendben marad.
   • HA NINCS PÁLYATERV A SZERVEREN ehhez a pályához, a fő ablak tetején és a gombon is kiírja (zónák
     nélkül a program nem pontoz). A pályatervet a Pálya fül „Másolás” gombjával lehet elküldeni.
@@ -444,7 +464,7 @@ Content Manager ajánlott.
 
 A játékban a jobb oldali app-sávban két ablak jelenik meg:
   • CHT Drift Judge – a fő ablak (Élő, Eredmény, Futások, Pálya, Beállítások fülek).
-    A fejlécében látszik a verzió: v0.3.14 – ha nem ezt látod, a régi verzió fut.
+    A fejlécében látszik a verzió: v0.3.15 – ha nem ezt látod, a régi verzió fut.
   • CHT Drift HUD   – részletes kijelző: szög középről (bal / jobb), sebesség, fokozat,
     fordulatszám, kormányállás, gáz, fék, kézifék, kuplung, hajtás (van / nincs) és
     kerékkipörgés, zóna, hibák, utolsó pont. A HUD ablak fejlécében lévő fogaskerékkel
@@ -586,8 +606,8 @@ fejlécén látszik, kész-e. Ami hiányzik vagy hibás, az a Teendők panelen i
 4. TESZTELÉSI TERV – PONTOS LÉPÉSEK
 -----------------------------------
 ELŐKÉSZÜLETEK (minden tesztelőnél, egyszer):
-  1. Telepítsd a 0.3.14-at, és nézd meg, hogy a fő ablak fejlécében v0.3.14 látszik (a szerveren a
-     szerverről kapott változat fejlécében „v0.3.14 · online”).
+  1. Telepítsd a 0.3.15-at, és nézd meg, hogy a fő ablak fejlécében v0.3.15 látszik (a szerveren a
+     szerverről kapott változat fejlécében „v0.3.15 · online”).
   2. Beállítások fül → ha a fül neve „Beállítások (… mód.)”, nyomd meg a „Mind vissza
      alapra” gombot (és utána az „Igen, mind vissza alapra”-t). Így mindenki ugyanazzal a
      beállítással tesztel, és az eredmények összevethetők. Ha egy teszt kifejezetten
@@ -870,7 +890,7 @@ T50 – A program a szerverről (10 perc, a PrikezsiaGang szerveren)
   bejegyzés, próbáld ki.
   Elvárt: belépéskor az üzenet a gyorsbillentyűkkel, az első belépéskor a fő ablak magától
   megnyílik, a HUD látszik, zárt fő ablaknál a képernyő tetején a „CHT Drift Judge” gomb; a
-  fejlécben „v0.3.14 · online”; az ablakok
+  fejlécben „v0.3.15 · online”; az ablakok
   megnyílnak, mozgathatók; kilépés és újbóli belépés után ugyanott vannak.
   Írd fel: a CSP verziót; mit mutat az „Online változat és szerver” szekció minden sora (főleg a
   Steam ID és az „Üzenetek a szerveren” sor); hiba esetén a custom_shaders_patch.log-ot.
@@ -963,6 +983,22 @@ T63 – Szerkesztőpontok (1 gép)
 T64 – Gyorsbillentyűk újra (1 gép, a 0.3.13 javítása – D29)
   Lépések: a szerveren Ctrl+Shift+D, Ctrl+Shift+H, Ctrl+Shift+Z; a fő ablak jobb alsó sarkát húzd.
   Elvárt: mind működik, az ablak átméretezhető.
+
+=== A9 BLOKK – A 0.3.15 ÚJDONSÁGAI (kb. 15 perc, 2 gép a szerveren) ===
+
+T65 – Bíró kijelölése a játékban (2 gép: az admin és egy pilóta)
+  Előtte: a szerveren pilotScores = 0 legyen (vagy figyeld a Beállításokban a szerepet), és az admin
+  legyen admin (a panel Admins listáján, vagy a chatben /admin <jelszó>).
+  Lépések: mindketten lépjenek be; az admin nyissa meg a Versenyzők fület, és a pilóta sorában
+  nyomja meg a „Bíró” gombot. Utána a pilóta gépén: Beállítások → Online változat és szerver.
+  Elvárt: a pilóta sorában pár másodpercen belül megjelennek a gombok (nem a „nem jelzett” felirat);
+  a „Bíró” után a pilóta gépén a „Szerep a szervertől”: Bíró (egy admin jelölte ki a játékban),
+  és látja a pontokat. Kilépés és újra belépés után is bíró. „Pilóta” gombbal visszavonható.
+
+T66 – Az új adattáblázat (1 gép)
+  Lépések: menj 2 futást a szerveren, majd a Beállításokban nézd meg a „Tesztadatok küldése” részt.
+  Elvárt: az „Elküldve” szám nő, nincs hiba. (A fejlesztő a táblázatban és a Drive-mappában látja a
+  futásokat és a felvételeket.)
 
 === B BLOKK – MÁSODIK ALKALOM (kb. 1,5 óra) ===
 
@@ -1125,7 +1161,7 @@ a küszöböket, a pontozási arányt és a zónák távolságait.
 7. TESZTJEGYZŐKÖNYV (minta – másold ki egy jegyzetbe vagy táblázatba)
 ---------------------------------------------------------------------
 Tesztelő neve: ............   Dátum: ............   Pálya: ............   Autó: ............
-Kormány / pedál: ............   App verzió (fejléc): v0.3.14   CSP verzió: ............
+Kormány / pedál: ............   App verzió (fejléc): v0.3.15   CSP verzió: ............
 
 Teszt | Futás ideje (Eredmény fül) | Mit csináltam | Mit várt a bíró | Mit mutatott a program | Megjegyzés
 ------+----------------------------+---------------+-----------------+------------------------+-----------

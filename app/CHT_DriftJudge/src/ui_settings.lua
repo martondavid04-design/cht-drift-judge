@@ -375,10 +375,15 @@ function S.serverInfo(app)
   if platform.online then
     local id = platform.steamID()
     row('Steam ID', id or 'ez a CSP nem adja meg – a szerep a Beállításokban választható', (not id) and U.col.orange or nil)
-    local role = platform.serverRole()
-    row('Szerep a szervertől', role == 'judge' and 'Bíró' or (role == 'streamer' and 'Közvetítő'
-      or (role == 'admin' and 'Szerveradmin – bíróként látja a pontokat' or 'Pilóta (nem admin, nincs a bírók listáján)')),
+    local role, src = platform.roleSource()
+    local srcText = src == 'list' and ' (a szerver beállításából)' or (src == 'assigned' and ' (egy admin jelölte ki a játékban)' or '')
+    row('Szerep a szervertől', (role == 'judge' and 'Bíró' or (role == 'streamer' and 'Közvetítő'
+      or (role == 'admin' and 'Szerveradmin – bíróként látja a pontokat' or 'Pilóta (nem admin, nem jelölték ki bírónak)'))) .. srcText,
       role and U.col.green or nil)
+    if app.roles then
+      row('Kijelölt szerepek', app.roles.stateText() .. (platform.isAdmin() and ' – adminként a Versenyzők fülön adhatsz szerepet' or ''),
+        app.roles.state == 'error' and U.col.orange or nil)
+    end
     row('Pontok a pilótáknak', platform.flag('pilotScores') and 'látszanak (pilotScores = 1)' or 'csak a bírók látják (pilotScores = 0)')
     local r = app.remote or {}
     local lay = r.state == 'ok' and (table.concat(r.names or {}, ', ') .. ' – használatban: ' .. tostring(r.active)) or (r.state == 'loading' and 'letöltés…')

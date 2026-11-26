@@ -69,6 +69,9 @@ help.topics = {
   { title = 'Néző mód (spectator): a követett autó pontozása', tab = 'settings', query = 'figyelt',
     text = 'Alapból (Figyelt autó: Automatikus) a program azt az autót pontozza és mutatja a HUD-on, amelyiket a kamera követ: vezetés közben a sajátodat, nézőként vagy bíróként azt, akit követsz (a HUD tetején: „Néző mód – név”). A követett autó eredménye ezen a gépen tájékoztató, és nem megy el a pilóta nevében: a hivatalos pontot a pilóta saját programja küldi. A Versenyzők fülön a „Követés” gombbal válthatsz autót.',
     keywords = 'néző spectator követés kamera hud bíró közvetítő' },
+  { title = 'Bírók és közvetítő kijelölése (szerveradmin)', tab = 'drivers',
+    text = 'A szerveradmin (a panel Admins listáján lévő, vagy a chatben „/admin <jelszó>”) a Versenyzők fülön minden fent lévő pilóta sorában a Pilóta / Bíró / Közvetítő gombbal ad szerepet. Steam ID-t nem kell gyűjteni: minden gép magától elküldi a sajátját a többinek. A szerep pár másodperc alatt megérkezik a pilóta gépére, és megmarad a későbbi belépéseknél és minden CHT szerveren (a táblázat Szerepek lapján, ki jelölte ki, az is). Szerepet csak annak lehet adni, akinél fut a program. A szerver beállításában megadott judges / broadcasters lista ennél erősebb.',
+    keywords = 'bíró kijelölés admin szerep közvetítő streamer steam id' },
 }
 
 function help.search(query, textMatches)

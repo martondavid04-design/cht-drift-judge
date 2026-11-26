@@ -73,18 +73,35 @@ function P.updateAdmin()
   pcall(ac.checkAdminPrivileges)
 end
 
--- Role given by the server (online): 'judge' | 'streamer' | 'admin' | nil (= pilot).
--- The Steam ID lists (judges / broadcasters) count only if this CSP version tells the Steam ID; the
--- reliable way is the server's admin list: every admin (judges, broadcaster PCs) sees the points.
+-- Role of a Steam ID in the server's own lists ([SCRIPT_…] judges / broadcasters), or nil.
+function P.listedRole(steamId)
+  if not steamId then return nil end
+  steamId = tostring(steamId)
+  if idList(P.server.judges)[steamId] then return 'judge' end
+  if idList(P.server.broadcasters)[steamId] then return 'streamer' end
+  return nil
+end
+
+-- Role chosen in the game by an admin (src/roles.lua sets this function): 'judge' | 'streamer' | nil.
+P.assignedRole = nil
+
+-- Role on the server (online): 'judge' | 'streamer' | 'admin' | nil (= pilot), and where it comes from.
+-- Order: the server's lists, then what an admin chose in the game (0.3.15), then being a server admin.
 function P.serverRole()
-  if not P.online then return nil end
+  local role = P.roleSource()
+  return role
+end
+function P.roleSource()
+  if not P.online then return nil, nil end
   local me = P.steamID()
   if me then
-    if idList(P.server.judges)[me] then return 'judge' end
-    if idList(P.server.broadcasters)[me] then return 'streamer' end
+    local listed = P.listedRole(me)
+    if listed then return listed, 'list' end
+    local a = P.assignedRole and P.assignedRole()
+    if a == 'judge' or a == 'streamer' then return a, 'assigned' end
   end
-  if P.isAdmin() then return 'admin' end
-  return nil
+  if P.isAdmin() then return 'admin', 'admin' end
+  return nil, nil
 end
 
 -- May this PC see points? Installed app: always (the role is chosen on the PC). Online: judges and

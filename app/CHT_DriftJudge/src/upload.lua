@@ -1,4 +1,4 @@
--- CHT Drift Judge – test data to the Google Sheet („CHT Drift Judge – tesztadatok”).
+-- CHT Drift Judge – test data to the Google Sheet („CHT Drift Judge – adatok (2)”).
 --
 -- Every PC that runs the program (the online script from the server, or the installed app) sends its
 -- data straight to the sheet over the internet (HTTPS, web.post) – nothing goes through the game server.
@@ -18,9 +18,12 @@ local platform = require('src/platform')
 
 local M = {}
 
--- Where the data goes (Apps Script web app „CHT Drift Judge – gyűjtő”) and the write key. The key is in
--- the public program, so it only lets someone add rows; reading the data needs another key.
-M.url = 'https://script.google.com/macros/s/AKfycbx6H9E260jLGFlsHgxQuXOaNtfdQwWnAeWquPwv07lk8VayG8zfsf7z1PmXXhuOFWmM/exec'
+-- Where the data goes (Apps Script web app „CHT Drift Judge – gyűjtő (2)”) and the write key. The key is
+-- in the public program, so it only lets someone add rows; reading the data needs another key.
+-- 0.3.15: new sheet – the first one grew too big (the recordings were in its cells) and Google made it
+-- read-only for good on 2026-11-26. Recordings now go to Drive files; the old data was copied over.
+M.url = 'https://script.google.com/macros/s/AKfycbxOxMCb5AuRvyurK3WEewwNGOe-Ph2O0sSQyPVNW50lKvSznnlXSnU1fc7qmadBkmmasA/exec'
+M.oldUrl = 'https://script.google.com/macros/s/AKfycbx6H9E260jLGFlsHgxQuXOaNtfdQwWnAeWquPwv07lk8VayG8zfsf7z1PmXXhuOFWmM/exec'
 M.key = 'Kwu8voShi5BWY71UMngoc6l39j3u'
 
 M.maxQueue = 40
@@ -204,8 +207,35 @@ local function sendSession()
     car = okN and carName or '', track = ac.getTrackFullID('/'), layout = app.layout and app.layout.name or '',
     csp = okV and csp or '', role = platform.serverRole() or (not platform.online and app.settings.ui.role) or 'pilóta',
     admin = okA and sim and sim.isAdmin == true,
+    steamId = platform.steamID(), server = M.serverName(),
     caps = caps(),
   }, 'belépés')
+end
+
+-- Name (and address) of the server, for the logs.
+function M.serverName()
+  local okN, n = pcall(ac.getServerName)
+  local okI, ip = pcall(ac.getServerIP)
+  local okP, port = pcall(ac.getServerPortTCP)
+  local name = okN and n and tostring(n) or ''
+  if okI and ip and tostring(ip) ~= '' then
+    name = name .. ' (' .. tostring(ip) .. ((okP and tonumber(port) and tonumber(port) > 0) and (':' .. tostring(port)) or '') .. ')'
+  end
+  return name
+end
+
+-- An admin gives a role in the game (src/roles.lua): goes even if test data is switched off.
+function M.role(info, cb)
+  if not app then if cb then cb(false, 'nincs elindítva') end return false end
+  if not configured() then if cb then cb(false, 'nincs beállítva a táblázat címe') end return false end
+  if type(web) ~= 'table' or not callable(web.post) then if cb then cb(false, 'ez a CSP nem tud adatot küldeni') end return false end
+  local okA, sim = pcall(ac.getSim)
+  local ok = push('role', {
+    type = 'role', steamId = tostring(info.steamId or ''), name = info.name, role = info.role,
+    bySteamId = platform.steamID(), admin = okA and sim and sim.isAdmin == true, server = M.serverName(),
+  }, 'szerep: ' .. tostring(info.name) .. ' → ' .. tostring(info.role), { force = true, front = true, cb = cb })
+  if not ok and cb then cb(false, 'nem fért a küldési sorba') end
+  return ok
 end
 
 -- Runs -----------------------------------------------------------------------------------------------

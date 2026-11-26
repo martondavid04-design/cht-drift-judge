@@ -9,6 +9,12 @@
 --
 -- Presence: the installed app writes a heartbeat into a shared structure; if the online script (sent by
 -- the server) sees a fresh heartbeat on the same PC, it stays passive – no double HUD, drawing or sending.
+--
+-- Hello (0.3.15): every PC with the online script tells the others its own Steam ID (and version, role);
+-- an admin's PC uses it to hand out judge / broadcaster roles in the Versenyzők tab (src/roles.lua), so
+-- nobody has to collect Steam IDs. Sent a few seconds after joining, when someone joins, as an answer to
+-- an unknown PC's hello (at most every 10 s) and every 2 minutes. Role ping: after an admin changed a
+-- role, the PC concerned re-reads the role list at once.
 
 local callable = require('src/fn').callable
 local platform = require('src/platform')
@@ -20,6 +26,10 @@ N.maxRuns = 300
 N.sendOk = nil       -- nil = not tried, true / false = last send
 N.lastError = nil
 N.receivedCount = 0
+N.peers = {}         -- [carIndex] = { steamId, role, appVersion, name, at } from the hello messages
+N.helloSent = 0
+N.helloEvery = 120
+N.onRolePing = nil   -- set by src/roles.lua
 
 local function buildLayout()
   local S = ac.StructItem
@@ -36,7 +46,12 @@ local function buildLayout()
 end
 
 local sendFn = nil
+local helloFn, pingFn = nil, nil
 local app = nil
+local helloAt = math.huge        -- clock() of the next hello (set by N.init)
+local lastAnswer = -100
+N.clockFn = nil
+local function clock() return (N.clockFn or os.clock)() end
 
 local function namespace()
   return (ac.SharedNamespace and ac.SharedNamespace.Shared) or 'shared'
@@ -90,6 +105,67 @@ function N.available()
   return sendFn ~= nil and sim ~= nil and sim.directMessagingAvailable == true
 end
 
+-- Hello and role ping ------------------------------------------------------------------------------
+local function helloLayout()
+  local S = ac.StructItem
+  return { S.key('cht.driftjudge.hello.v1'), steamId = S.string(20), role = S.string(10), appVersion = S.string(12) }
+end
+local function pingLayout()
+  local S = ac.StructItem
+  return { S.key('cht.driftjudge.role.v1'), steamId = S.string(20) }
+end
+
+function N.receiveHello(sender, msg)
+  if not msg then return end
+  local idx = sender and sender.index or -1
+  if idx <= 0 then return end -- own message (if the server echoes it) or unknown sender
+  local id = tostring(msg.steamId or ''):match('^%d+$')
+  local known = N.peers[idx] ~= nil and N.peers[idx].steamId == id
+  local okD, d = pcall(ac.getDriverName, idx)
+  N.peers[idx] = { steamId = id, role = tostring(msg.role or ''), appVersion = tostring(msg.appVersion or ''),
+    name = okD and d and tostring(d) or '?', at = clock() }
+  -- someone new: answer soon, so a PC that just joined learns everyone (at most every 10 s)
+  if not known and clock() - lastAnswer > 10 then
+    lastAnswer = clock()
+    helloAt = math.min(helloAt, clock() + 1 + math.random() * 2)
+  end
+end
+
+function N.sendHello()
+  local me = platform.steamID()
+  if not helloFn or not me or not N.available() then return false end
+  local role = platform.serverRole() or ''
+  local ok, r = pcall(helloFn, { steamId = me, role = role, appVersion = app and app.version or '' })
+  if ok and r ~= false then N.helloSent = N.helloSent + 1 return true end
+  if not ok then N.lastError = tostring(r) end
+  return false
+end
+
+function N.sendRolePing(steamId)
+  if not pingFn or not N.available() then return false end
+  local ok, r = pcall(pingFn, { steamId = tostring(steamId or '') })
+  return ok and r ~= false
+end
+
+-- Peer of a car (only if it is still on the server).
+function N.peer(carIndex)
+  local p = N.peers[carIndex]
+  if not p then return nil end
+  local okC, c = pcall(ac.getCar, carIndex)
+  if not okC or not c or c.isConnected == false then return nil end
+  return p
+end
+
+-- Every frame (also while the online script stays passive: only it knows this PC's Steam ID).
+function N.update()
+  if not helloFn then return end
+  local t = clock()
+  if t >= helloAt then
+    -- not sent (messages not ready yet, no Steam ID): try again in 10 s
+    helloAt = t + (N.sendHello() and N.helloEvery or 10)
+  end
+end
+
 function N.init(appRef)
   app = appRef
   N.load()
@@ -99,6 +175,25 @@ function N.init(appRef)
     if not okR then N.lastError = tostring(err) end
   end, namespace())
   if ok then sendFn = fn else N.lastError = tostring(fn) end
+  local okH, h = pcall(ac.OnlineEvent, helloLayout(), function(sender, msg)
+    local okR, err = pcall(N.receiveHello, sender, msg)
+    if not okR then N.lastError = tostring(err) end
+  end, namespace())
+  if okH then helloFn = h; helloAt = clock() + 5 end
+  local okP, pf = pcall(ac.OnlineEvent, pingLayout(), function(sender, msg)
+    if msg and N.onRolePing then pcall(N.onRolePing, tostring(msg.steamId or '')) end
+  end, namespace())
+  if okP then pingFn = pf end
+  -- someone joined: say hello a few seconds later (their program has started by then)
+  if callable(ac.onClientConnected) then
+    pcall(ac.onClientConnected, function(carIndex)
+      N.peers[carIndex] = nil
+      helloAt = math.min(helloAt, clock() + 4)
+    end)
+  end
+  if callable(ac.onClientDisconnected) then
+    pcall(ac.onClientDisconnected, function(carIndex) N.peers[carIndex] = nil end)
+  end
 end
 
 local function clip(s, n)
