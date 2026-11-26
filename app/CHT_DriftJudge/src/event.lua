@@ -671,7 +671,7 @@ local phaseNames = { [0] = 'idle', 'armed', 'running', 'review', 'voting', 'deci
 -- the director as a short fingerprint of the name)
 local function liveLayout()
   local S = ac.StructItem
-  return { S.key('cht.driftjudge.evt.v1'), eventId = S.string(16), rev = S.uint32(), director = S.uint32(), battle = S.string(6),
+  return { S.key('cht.driftjudge.evt.v1'), eventId = S.string(24), rev = S.uint32(), director = S.uint32(), battle = S.string(8),
     carA = S.byte(), carB = S.byte(), lead = S.byte(), phase = S.byte(), run = S.byte(), pair = S.byte(), winner = S.byte() }
 end
 
@@ -684,11 +684,11 @@ function E.nameHash(name)
 end
 local function voteLayout()
   local S = ac.StructItem
-  return { S.key('cht.driftjudge.vote.v1'), eventId = S.string(16), battle = S.string(6), pair = S.byte(), vote = S.byte() }
+  return { S.key('cht.driftjudge.vote.v1'), eventId = S.string(24), battle = S.string(8), pair = S.byte(), vote = S.byte() }
 end
 local function dedLayout()
   local S = ac.StructItem
-  return { S.key('cht.driftjudge.tded.v1'), eventId = S.string(16), battle = S.string(6), run = S.byte(), target = S.byte(),
+  return { S.key('cht.driftjudge.tded.v1'), eventId = S.string(24), battle = S.string(8), run = S.byte(), target = S.byte(),
     amount = S.float(), note = S.string(48) }
 end
 

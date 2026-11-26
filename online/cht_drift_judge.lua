@@ -3678,7 +3678,7 @@ local phaseNames = { [0] = 'idle', 'armed', 'running', 'review', 'voting', 'deci
 -- the director as a short fingerprint of the name)
 local function liveLayout()
   local S = ac.StructItem
-  return { S.key('cht.driftjudge.evt.v1'), eventId = S.string(16), rev = S.uint32(), director = S.uint32(), battle = S.string(6),
+  return { S.key('cht.driftjudge.evt.v1'), eventId = S.string(24), rev = S.uint32(), director = S.uint32(), battle = S.string(8),
     carA = S.byte(), carB = S.byte(), lead = S.byte(), phase = S.byte(), run = S.byte(), pair = S.byte(), winner = S.byte() }
 end
 
@@ -3691,11 +3691,11 @@ function E.nameHash(name)
 end
 local function voteLayout()
   local S = ac.StructItem
-  return { S.key('cht.driftjudge.vote.v1'), eventId = S.string(16), battle = S.string(6), pair = S.byte(), vote = S.byte() }
+  return { S.key('cht.driftjudge.vote.v1'), eventId = S.string(24), battle = S.string(8), pair = S.byte(), vote = S.byte() }
 end
 local function dedLayout()
   local S = ac.StructItem
-  return { S.key('cht.driftjudge.tded.v1'), eventId = S.string(16), battle = S.string(6), run = S.byte(), target = S.byte(),
+  return { S.key('cht.driftjudge.tded.v1'), eventId = S.string(24), battle = S.string(8), run = S.byte(), target = S.byte(),
     amount = S.float(), note = S.string(48) }
 end
 
@@ -13782,7 +13782,8 @@ local function onAnswer(myToken, item, err, response)
   if not okP or type(data) ~= 'table' then finish(item, false, 'nem JSON válasz') return end
   if data.ok == false then
     -- a wrong key / type / size will not get better by retrying
-    if data.error == 'key' or data.error == 'type' or data.error == 'size' then item.permanent = true end
+    local e = data.error
+    if e == 'key' or e == 'type' or e == 'size' or e == 'format' or e == 'id' or e == 'json' or e == 'stale' then item.permanent = true end
     finish(item, false, 'a táblázat elutasította: ' .. tostring(data.error))
     return
   end

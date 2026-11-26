@@ -382,7 +382,8 @@ local function onAnswer(myToken, item, err, response)
   if not okP or type(data) ~= 'table' then finish(item, false, 'nem JSON válasz') return end
   if data.ok == false then
     -- a wrong key / type / size will not get better by retrying
-    if data.error == 'key' or data.error == 'type' or data.error == 'size' then item.permanent = true end
+    local e = data.error
+    if e == 'key' or e == 'type' or e == 'size' or e == 'format' or e == 'id' or e == 'json' or e == 'stale' then item.permanent = true end
     finish(item, false, 'a táblázat elutasította: ' .. tostring(data.error))
     return
   end
