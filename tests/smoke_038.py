@@ -124,7 +124,7 @@ def online_base(server_config=None, steam_id=None, with_layout=True, extras=Fals
         stub.webResponses[base + scenarios.TRACK_KEY + '/Teszt.json'] = json.dumps(scenarios.LAYOUT)
         stub.webResponses[base + scenarios.TRACK_KEY + '/index.json'] = json.dumps(['Teszt'])
     if prepare:
-        prepare(stub)
+        prepare(stub, L)
     load_online(L, g)
     for _ in range(5):
         stub.frameStep(1 / 60)

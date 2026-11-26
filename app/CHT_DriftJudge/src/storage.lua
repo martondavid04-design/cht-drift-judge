@@ -31,6 +31,30 @@ if platform.online then
   local index = {}
   local function sget(k) if not store then return nil end local ok, v = pcall(function() return store[k] end) if ok then return v end end
   local function sset(k, v) if store then pcall(function() store[k] = v end) end end
+
+  -- 0.3.11: one fixed storage place (ac.storageSetPath), so a new program version (a new file from the
+  -- server) always finds the layouts and settings saved by the earlier ones. What 0.3.8–0.3.10 saved in
+  -- CSP's default place is copied over once.
+  do
+    local oldRaw = sget('cht_index')
+    local old = {}
+    if type(oldRaw) == 'string' and oldRaw ~= '' then
+      old.cht_index = oldRaw
+      local okO, t = pcall(JSON.parse, dec(oldRaw))
+      if okO and type(t) == 'table' then
+        for _, slot in pairs(t) do
+          local v = sget('cht_f' .. tostring(slot))
+          if type(v) == 'string' then old['cht_f' .. tostring(slot)] = v end
+        end
+      end
+    end
+    storage.fixedPlace = type(ac.storageSetPath) == 'function' and pcall(ac.storageSetPath, 'cht_drift_judge') or false
+    if storage.fixedPlace and old.cht_index and sget('cht_index') == nil then
+      for k, v in pairs(old) do sset(k, v) end
+      storage.movedOld = true
+    end
+  end
+
   do
     local raw = sget('cht_index')
     local ok, t = pcall(JSON.parse, raw and dec(raw) or '')
@@ -320,6 +344,37 @@ function storage.remoteIndexURL(base)
   base = base or platform.server.base or platform.defaultBase
   if base:sub(-1) ~= '/' then base = base .. '/' end
   return base .. 'layouts/' .. urlEncode(storage.trackKey()) .. '/index.json'
+end
+
+-- Online: layouts the installed app saved on this PC (Documents/Assetto Corsa/CHT Drift Judge/layouts/<track>)
+-- are taken over (read only), if this CSP lets the online script read them. A layout already in the online
+-- storage under the same name is kept. Returns the names taken over and the reason when it was not possible.
+function storage.importInstalledLayouts()
+  if not platform.online then return {}, 'nem online' end
+  local ok, res, why = pcall(function()
+    if type(io) ~= 'table' or type(io.load) ~= 'function' or type(io.scanDir) ~= 'function' then return {}, 'nincs fájlolvasás' end
+    local docs = ac.getFolder(ac.FolderID and ac.FolderID.ACDocuments or 'ACDocuments')
+    if type(docs) ~= 'string' or docs == '' then return {}, 'nincs Dokumentumok mappa' end
+    local dir = docs .. '/CHT Drift Judge/layouts/' .. storage.trackKey()
+    local files = io.scanDir(dir, '*.json')
+    if type(files) ~= 'table' then return {}, 'a mappa nem olvasható' end
+    local names = {}
+    for _, f in ipairs(files) do
+      local name = tostring(f):gsub('%.json$', '')
+      local target = storage.layoutPath(name)
+      if not fs.fileExists(target) then
+        local text = io.load(dir .. '/' .. f)
+        local okP, data = pcall(JSON.parse, text or '')
+        if okP and type(data) == 'table' and type(data.zones) == 'table' then
+          fs.save(target, text)
+          names[#names + 1] = name
+        end
+      end
+    end
+    return names, (#files == 0) and 'nincs ilyen pályaterv' or nil
+  end)
+  if not ok then return {}, tostring(res) end
+  return res or {}, why
 end
 
 -- callback(err, parsedJSON). Only for small JSON files; errors are strings.

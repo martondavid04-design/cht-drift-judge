@@ -3,7 +3,7 @@
 -- The same code runs as an installed Lua app (apps/lua/CHT_DriftJudge) and as an online script that the
 -- server sends to every player (one bundled file from GitHub, see tools/build.py and src/platform.lua).
 
-local APP_VERSION = '0.3.10'
+local APP_VERSION = '0.3.11'
 
 local config = require('src/config')
 local layoutMod = require('src/layout')
@@ -394,6 +394,16 @@ end
 
 -- Init ---------------------------------------------------------------------------------------------
 
+-- Online: take over the layouts the installed app saved on this PC (so they do not "disappear" when only
+-- the version from the server runs).
+app.imported = { names = {}, why = nil }
+if platform.online then
+  app.imported.names, app.imported.why = storage.importInstalledLayouts()
+  if #app.imported.names > 0 then
+    status(string.format('%d pályaterv átvéve a telepített appból: %s', #app.imported.names, table.concat(app.imported.names, ', ')), U.col.green, 12)
+  end
+end
+
 do
   local key = storage.trackKey()
   local name = app.settings.activeLayouts[key]
@@ -430,6 +440,17 @@ function app.loadServerLayouts(force)
       end
       local l = layoutMod.sanitize(data)
       l.name = name
+      -- a layout of the same name made on this PC (not from the server) is kept as „<name> (helyi)”
+      if not app.serverLayouts[name] and storage.fs.fileExists(storage.layoutPath(name)) then
+        local mine = storage.readJSON(storage.layoutPath(name))
+        local okA, a = pcall(JSON.stringify, mine and mine.zones)
+        local okB, b = pcall(JSON.stringify, l.zones)
+        if mine and not (okA and okB and a == b) and not storage.fs.fileExists(storage.layoutPath(name .. ' (helyi)')) then
+          mine.name = name .. ' (helyi)'
+          storage.writeJSON(storage.layoutPath(mine.name), mine)
+          status('A gépen lévő „' .. name .. '” pályaterv megmaradt „' .. mine.name .. '” néven (a szerveré lett az eredeti név).', U.col.orange, 12)
+        end
+      end
       storage.writeJSON(storage.layoutPath(name), l)
       app.serverLayouts[name] = true
       app.remote.names[#app.remote.names + 1] = name

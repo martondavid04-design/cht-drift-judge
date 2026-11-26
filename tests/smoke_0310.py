@@ -120,7 +120,7 @@ def dragging():
 
 def old_app():
     print('Régi telepített app ugyanazon a gépen:')
-    def old037(st):
+    def old037(st, *_):
         st.installedManifest = '[ABOUT]\nNAME = CHT Drift Judge\nVERSION = 0.3.7\n'
     L, g, stub, app = online_base(prepare=old037)
     P = req(L, 'src/platform')
@@ -132,7 +132,7 @@ def old_app():
     Settings = req(L, 'src/ui_settings')
     Settings.serverInfo(app)
     check(not errors(g), 'Beállítások – telepített app sor hiba nélkül')
-    def new0310(st):
+    def new0310(st, *_):
         st.installedManifest = '[ABOUT]\nVERSION = 0.3.10\n'
     L, g, stub, app = online_base(prepare=new0310)
     P = req(L, 'src/platform')

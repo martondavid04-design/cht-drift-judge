@@ -200,9 +200,21 @@ local realIO = io
 if __STUB_ONLINE then
   -- online scripts have no file access (SDK flag withoutIO): only a few harmless functions exist
   -- (io.load can read some files; STUB.installedManifest = text of apps/lua/CHT_DriftJudge/manifest.ini)
+  -- STUB.docsLayouts = { ['Brno.json'] = text } = layouts the installed app saved in Documents
   io = { load = function(p, fb)
-    if STUB.installedManifest and norm(p):find('/lua/CHT_DriftJudge/manifest.ini', 1, true) then return STUB.installedManifest end
+    p = norm(p)
+    if STUB.installedManifest and p:find('/lua/CHT_DriftJudge/manifest.ini', 1, true) then return STUB.installedManifest end
+    local name = p:match('/CHT Drift Judge/layouts/[^/]+/([^/]+)$')
+    if name and STUB.docsLayouts and STUB.docsLayouts[name] then return STUB.docsLayouts[name] end
     return fb
+  end,
+  scanDir = function(d)
+    local r = {}
+    if STUB.docsLayouts and norm(d):find('/CHT Drift Judge/layouts/', 1, true) then
+      for k in pairs(STUB.docsLayouts) do r[#r + 1] = k end
+      table.sort(r)
+    end
+    return r
   end }
 else
   io = {
@@ -311,20 +323,28 @@ end
 
 -- online-script only APIs
 if __STUB_ONLINE then
-  local store = {}
-  STUB.storage = store
+  -- STUB.storage = the place in use; ac.storageSetPath(p) switches to STUB.storages[p] (CSP: a fixed
+  -- subfolder instead of the default one)
+  STUB.storages = { [''] = {} }
+  STUB.storage = STUB.storages['']
+  STUB.storagePath = ''
+  function ac.storageSetPath(p)
+    STUB.storagePath = tostring(p)
+    STUB.storages[STUB.storagePath] = STUB.storages[STUB.storagePath] or {}
+    STUB.storage = STUB.storages[STUB.storagePath]
+  end
   ac.storage = setmetatable({}, {
     __call = function(_, layout, defaultValue)
       if type(layout) == 'string' then
         local key = layout
-        if store[key] == nil then store[key] = defaultValue end
-        return { get = function() return store[key] end, set = function(_, v) store[key] = v end }
+        if STUB.storage[key] == nil then STUB.storage[key] = defaultValue end
+        return { get = function() return STUB.storage[key] end, set = function(_, v) STUB.storage[key] = v end }
       end
-      return setmetatable({}, { __index = function(_, k) local v = store[k] if v == nil then return layout[k] end return v end,
-        __newindex = function(_, k, v) store[k] = v end })
+      return setmetatable({}, { __index = function(_, k) local v = STUB.storage[k] if v == nil then return layout[k] end return v end,
+        __newindex = function(_, k, v) STUB.storage[k] = v end })
     end,
-    __index = function(_, k) return store[k] end,
-    __newindex = function(_, k, v) store[k] = v end,
+    __index = function(_, k) return STUB.storage[k] end,
+    __newindex = function(_, k, v) STUB.storage[k] = v end,
   })
   STUB.serverConfig = STUB.serverConfig or {}
   function ac.configValues(layout)

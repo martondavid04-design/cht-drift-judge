@@ -393,6 +393,12 @@ function S.serverInfo(app)
     elseif inst == false then instText = 'nincs telepítve'
     else instText = 'nem fut (azt, hogy telepítve van-e, ez a CSP nem mutatja meg)' end
     row('Telepített app ezen a gépen', instText, old and U.col.orange or nil)
+    local imp = app.imported or {}
+    if imp.names and #imp.names > 0 then
+      row('Pályatervek a telepített appból', table.concat(imp.names, ', '), U.col.green)
+    else
+      row('Pályatervek a telepített appból', imp.why and ('nincs átvett (' .. tostring(imp.why) .. ')') or 'nincs átvett')
+    end
   end
   if N then
     row('Üzenetek a szerveren', N.available() and 'működnek (AssettoServer)' or 'nem érhetők el (Kunos szerver vagy offline)', N.available() and U.col.green or U.col.dim)

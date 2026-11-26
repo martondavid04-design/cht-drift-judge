@@ -181,6 +181,8 @@ local function caps()
     } or nil,
     remoteLayout = app.remote and { state = app.remote.state, active = app.remote.active, error = app.remote.error } or nil,
     installedApp = platform.online and platform.installedAppVersion() or nil,
+    importedLayouts = app.imported and { n = #(app.imported.names or {}), why = app.imported.why } or nil,
+    storageFixed = require('src/storage').fixedPlace, storageMoved = require('src/storage').movedOld,
   }
 end
 
