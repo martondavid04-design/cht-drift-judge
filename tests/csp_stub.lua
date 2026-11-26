@@ -425,13 +425,16 @@ function ac.connect(layout, keepLive, namespace)
   return STUB.connected[key]
 end
 
+-- STUB.keysDown[virtual key code] = true → ac.isKeyDown (17 Ctrl, 16 Shift, 18 Alt, 68 D …)
+STUB.keysDown = {}
+function ac.isKeyDown(k) return STUB.keysDown[k] == true end
 function ac.ControlButton(id, key)
   local b = { id = id }
   function b:pressed() return STUB.keyPressed[id] == true end
   function b:down() return false end
   function b:released() return false end
   function b:control() return false end
-  function b:boundTo() return nil end
+  function b:boundTo() return STUB.boundTo and STUB.boundTo[id] or nil end
   function b:setAlwaysActive() return self end
   function b:configured() return true end
   return b

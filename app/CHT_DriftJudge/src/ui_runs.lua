@@ -1,5 +1,6 @@
 -- CHT Drift Judge – saved runs list (CSP only).
 
+local callable = require('src/fn').callable
 local U = require('src/ui_common')
 local storage = require('src/storage')
 local platform = require('src/platform')
@@ -105,7 +106,7 @@ local function serverRuns(app)
           e.zero and ('igen: ' .. (e.zeroReason or '')) or '', faultsText(e), e.layout or '' }, '\t')
       end
       local text = table.concat(lines, '\n')
-      if type(ac.setClipboardText) == 'function' then pcall(ac.setClipboardText, text) end
+      if callable(ac.setClipboardText) then pcall(ac.setClipboardText, text) end
       if app.status then app.status(string.format('%d futás a vágólapon.', #list), U.col.green) end
     end
     for i, e in ipairs(list) do

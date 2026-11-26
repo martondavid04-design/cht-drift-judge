@@ -1,9 +1,10 @@
-CHT DRIFT JUDGE – 0.3.12 (1. fázis: solo / kvalifikáció)
+CHT DRIFT JUDGE – 0.3.13 (1. fázis: solo / kvalifikáció)
 CornerHuntersTeam drift bírói rendszer Assetto Corsához
 =====================================================================
 
 TARTALOM
-  0. Új a 0.3.12-ben (pályaterv egy gombbal mindenkinek), a 0.3.11-ben (a pályatervek frissítéskor
+  0. Új a 0.3.13-ban (javítás: gyorsbillentyűk, átméretezés), a 0.3.12-ben (pályaterv egy
+     gombbal mindenkinek), a 0.3.11-ben (a pályatervek frissítéskor
      megmaradnak), a 0.3.10-ben (a szerverről kapott
      program belépéskor látszik), a 0.3.9-ben (a tesztadatok automatikusan a fejlesztő Google-táblázatába mennek; a
      szerveradminok bíróként látják a pontokat), a 0.3.8-ban (a program a szerverről is jön – nem kell telepíteni; pályarajz ki-be egy
@@ -20,8 +21,23 @@ TARTALOM
   7. Tesztjegyzőkönyv (kitöltendő minta)
 
 
-0. ÚJ A 0.3.12-BEN
-------------------
+0. JAVÍTÁS A 0.3.13-BAN
+-----------------------
+  • GYORSBILLENTYŰK: a Ctrl+Shift+D (fő ablak), Ctrl+Shift+H (HUD) és Ctrl+Shift+Z (pályarajz)
+    most biztosan működik. Eddig a CSP (0.3.0-preview120) a beállításkor Alt+D / Alt+H / Alt+Z-re
+    tette őket, ezért a Ctrl+Shift nem ment. A program most maga figyeli a Ctrl+Shift+betűt, és a
+    CSP-ben beállított gomb (pl. Alt+D) is működik mellette – az üzenetek mindkettőt kiírják.
+  • ÁTMÉRETEZÉS: a szerverről kapott változat fő ablaka a jobb alsó sarkánál (három kis csík)
+    átméretezhető – eddig a sarkot az ablak tartalma eltakarta, ezért nem lehetett megfogni. A HUD is
+    átméretezhető és mozgatható, amíg a fő ablak nyitva van (a tartalom a szélességhez igazodik; a
+    betűméret a Beállításokban: HUD → Méret).
+  • A program eddig néhány CSP-függvényt hiányzónak hitt, pedig megvolt (a CSP „cdata” formában
+    adja őket): ezért nem frissült pl. az admin-jog, és ezért nem került állandó helyre a szerverről
+    kapott változat tárolója. Ez is javítva.
+
+
+ÚJ A 0.3.12-BEN
+---------------
   • PÁLYATERV EGY GOMBBAL MINDENKINEK: Pálya fül → „Feltöltés mindenkinek” (a megerősítéshez még
     egyszer rá kell kattintani). A program elmenti, és feltölti a tervet; mindenki megkapja, aki
     elindítja a programot (a szerverről kapott és a telepített változat is), vagy a Pálya fülön a
@@ -73,7 +89,7 @@ TARTALOM
     szerverről kapott mellett külön fut, és a saját (régi) verziószámát mutatja. A program most szól
     érte (üdvözlő üzenet, fő ablak, Beállítások). Teendő: kilépés után az
     assettocorsa\apps\lua\CHT_DriftJudge mappát nevezd át (pl. _CHT_DriftJudge-ra), vagy telepítsd
-    a legújabbat (GitHub: dist\CHT_DriftJudge_v0.3.12.zip). A 0.3.8-tól a telepített app szól a
+    a legújabbat (GitHub: dist\CHT_DriftJudge_v0.3.13.zip). A 0.3.8-tól a telepített app szól a
     szerverről kapottnak, és az ilyenkor csendben marad.
   • HA NINCS PÁLYATERV A SZERVEREN ehhez a pályához, a fő ablak tetején és a gombon is kiírja (zónák
     nélkül a program nem pontoz). A pályatervet a Pálya fül „Másolás” gombjával lehet elküldeni.
@@ -400,7 +416,7 @@ Content Manager ajánlott.
 
 A játékban a jobb oldali app-sávban két ablak jelenik meg:
   • CHT Drift Judge – a fő ablak (Élő, Eredmény, Futások, Pálya, Beállítások fülek).
-    A fejlécében látszik a verzió: v0.3.12 – ha nem ezt látod, a régi verzió fut.
+    A fejlécében látszik a verzió: v0.3.13 – ha nem ezt látod, a régi verzió fut.
   • CHT Drift HUD   – részletes kijelző: szög középről (bal / jobb), sebesség, fokozat,
     fordulatszám, kormányállás, gáz, fék, kézifék, kuplung, hajtás (van / nincs) és
     kerékkipörgés, zóna, hibák, utolsó pont. A HUD ablak fejlécében lévő fogaskerékkel
@@ -542,8 +558,8 @@ fejlécén látszik, kész-e. Ami hiányzik vagy hibás, az a Teendők panelen i
 4. TESZTELÉSI TERV – PONTOS LÉPÉSEK
 -----------------------------------
 ELŐKÉSZÜLETEK (minden tesztelőnél, egyszer):
-  1. Telepítsd a 0.3.12-t, és nézd meg, hogy a fő ablak fejlécében v0.3.12 látszik (a szerveren a
-     szerverről kapott változat fejlécében „v0.3.12 · online”).
+  1. Telepítsd a 0.3.13-at, és nézd meg, hogy a fő ablak fejlécében v0.3.13 látszik (a szerveren a
+     szerverről kapott változat fejlécében „v0.3.13 · online”).
   2. Beállítások fül → ha a fül neve „Beállítások (… mód.)”, nyomd meg a „Mind vissza
      alapra” gombot (és utána az „Igen, mind vissza alapra”-t). Így mindenki ugyanazzal a
      beállítással tesztel, és az eredmények összevethetők. Ha egy teszt kifejezetten
@@ -826,7 +842,7 @@ T50 – A program a szerverről (10 perc, a PrikezsiaGang szerveren)
   bejegyzés, próbáld ki.
   Elvárt: belépéskor az üzenet a gyorsbillentyűkkel, az első belépéskor a fő ablak magától
   megnyílik, a HUD látszik, zárt fő ablaknál a képernyő tetején a „CHT Drift Judge” gomb; a
-  fejlécben „v0.3.12 · online”; az ablakok
+  fejlécben „v0.3.13 · online”; az ablakok
   megnyílnak, mozgathatók; kilépés és újbóli belépés után ugyanott vannak.
   Írd fel: a CSP verziót; mit mutat az „Online változat és szerver” szekció minden sora (főleg a
   Steam ID és az „Üzenetek a szerveren” sor); hiba esetén a custom_shaders_patch.log-ot.
@@ -889,7 +905,7 @@ T59 – Saját módosítás megmarad (1 gép)
   néven megmarad, és a program szól érte.
 
 T60 – Telepített app frissítése (1 gép)
-  Lépések: írd felül az assettocorsa\apps\lua\CHT_DriftJudge mappát a 0.3.12 zip tartalmával.
+  Lépések: írd felül az assettocorsa\apps\lua\CHT_DriftJudge mappát a legújabb zip tartalmával.
   Elvárt: minden pályaterv, beállítás és futás megvan (Dokumentumok\Assetto Corsa\CHT Drift Judge).
 
 === B BLOKK – MÁSODIK ALKALOM (kb. 1,5 óra) ===
@@ -1053,7 +1069,7 @@ a küszöböket, a pontozási arányt és a zónák távolságait.
 7. TESZTJEGYZŐKÖNYV (minta – másold ki egy jegyzetbe vagy táblázatba)
 ---------------------------------------------------------------------
 Tesztelő neve: ............   Dátum: ............   Pálya: ............   Autó: ............
-Kormány / pedál: ............   App verzió (fejléc): v0.3.12   CSP verzió: ............
+Kormány / pedál: ............   App verzió (fejléc): v0.3.13   CSP verzió: ............
 
 Teszt | Futás ideje (Eredmény fül) | Mit csináltam | Mit várt a bíró | Mit mutatott a program | Megjegyzés
 ------+----------------------------+---------------+-----------------+------------------------+-----------

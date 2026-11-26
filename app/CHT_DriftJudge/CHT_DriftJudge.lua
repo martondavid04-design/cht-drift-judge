@@ -3,8 +3,9 @@
 -- The same code runs as an installed Lua app (apps/lua/CHT_DriftJudge) and as an online script that the
 -- server sends to every player (one bundled file from GitHub, see tools/build.py and src/platform.lua).
 
-local APP_VERSION = '0.3.12'
+local APP_VERSION = '0.3.13'
 
+local callable = require('src/fn').callable
 local config = require('src/config')
 local layoutMod = require('src/layout')
 local scoring = require('src/scoring')
@@ -61,12 +62,7 @@ app.status = status
 
 -- Hotkeys and the main switch of the track drawings (E01) ------------------------------------------
 controls.init(platform.online)
-function app.hotkeyText(id)
-  local b = controls.boundTo(id)
-  if b and b ~= '' then return b end
-  for _, d in ipairs(controls.defs) do if d.id == id then return d.defaultText end end
-  return ''
-end
+function app.hotkeyText(id) return controls.text(id) end
 
 function app.toggleTrackDraw()
   local on = visibility.toggleMaster(app.settings)
@@ -655,6 +651,7 @@ function app.setOnlineHud(on, source)
 end
 
 local function hotkeys()
+  controls.update()
   if controls.pressed('zones') then app.toggleTrackDraw() end
   if platform.online then
     if controls.pressed('main') then app.setOnlineMain(not onlineUI.main, 'gyorsbillentyű') end
@@ -1082,10 +1079,10 @@ local function storedVec(key, dx, dy)
   return dx, dy
 end
 
-local function clampWindow(x, y, w, h)
+local function clampWindow(x, y, w, h, minW, minH)
   local sw, sh = screenSize()
-  w = math.max(320, math.min(w, sw))
-  h = math.max(200, math.min(h, sh))
+  w = math.max(minW or 320, math.min(w, sw))
+  h = math.max(minH or 200, math.min(h, sh))
   x = math.max(0, math.min(x, sw - 60))
   y = math.max(0, math.min(y, sh - 40))
   return x, y, w, h
@@ -1101,7 +1098,7 @@ local function trackMouse()
 end
 
 local function mouseDelta()
-  if type(ui.mouseDelta) == 'function' then
+  if callable(ui.mouseDelta) then
     local ok, d = pcall(ui.mouseDelta)
     if ok and d then return d.x or 0, d.y or 0 end
   end
@@ -1115,7 +1112,7 @@ local function onlineWindow(opts, content)
   local sw, sh = screenSize()
   local x, y = storedVec(opts.posKey, opts.defPos[1], opts.defPos[2])
   local w, h = storedVec(opts.sizeKey, opts.defSize[1], opts.defSize[2])
-  x, y, w, h = clampWindow(x, y, w, h)
+  x, y, w, h = clampWindow(x, y, w, h, opts.minW, opts.minH)
   local closed = false
   local moved = false
   local fn = opts.transparent and ui.transparentWindow or ui.toolWindow
@@ -1140,20 +1137,26 @@ local function onlineWindow(opts, content)
     end
     content()
     if opts.resizable then
+      -- resize grip in the bottom right corner (the content leaves a free strip for it, see GRIP)
       local ws = ui.windowSize()
-      ui.setCursorX(ws.x - 18)
-      ui.setCursorY(ws.y - 18)
-      ui.invisibleButton('##grip_' .. opts.id, vec2(16, 16))
+      ui.setCursorX(ws.x - 22)
+      ui.setCursorY(ws.y - 22)
+      ui.invisibleButton('##grip_' .. opts.id, vec2(22, 22))
+      local hot = ui.itemHovered() or ui.itemActive()
       if ui.itemActive() then
         local dx, dy = mouseDelta()
         if dx ~= 0 or dy ~= 0 then w, h = w + dx, h + dy; moved = true end
       end
       U.tip('Húzd az ablak átméretezéséhez.')
-      ui.drawRectFilled(vec2(ws.x - 12, ws.y - 12), vec2(ws.x - 4, ws.y - 4), rgbm(0.6, 0.6, 0.7, 0.6), 2)
+      local col = hot and rgbm(0.95, 0.55, 0.15, 1) or rgbm(0.75, 0.75, 0.85, 0.75)
+      for i = 0, 2 do
+        local o = 4 + i * 5
+        ui.drawLine(vec2(ws.x - o, ws.y - 3), vec2(ws.x - 3, ws.y - o), col, 1.5)
+      end
     end
   end)
   if moved then
-    x, y, w, h = clampWindow(x, y, w, h)
+    x, y, w, h = clampWindow(x, y, w, h, opts.minW, opts.minH)
     app.settings.ui[opts.posKey] = { x, y }
     if opts.sizeKey then app.settings.ui[opts.sizeKey] = { w, h } end
     app.saveSoon()
@@ -1192,7 +1195,7 @@ local function welcome()
   local text = string.format('CHT Drift Judge %s betöltve a szerverről. Fő ablak: %s, HUD: %s, pályarajz ki-be: %s.',
     APP_VERSION, app.hotkeyText('main'), app.hotkeyText('hud'), app.hotkeyText('zones'))
   if old then text = text .. ' Figyelem: a régi telepített változat is fut a gépeden – lásd a fő ablakot.' end
-  if type(ui.toast) == 'function' then
+  if callable(ui.toast) then
     pcall(ui.toast, ui.Icons and (ui.Icons.Info or ui.Icons.Settings) or nil, text)
   end
   if not old then status(text, U.col.green, 15) end
@@ -1237,7 +1240,7 @@ end
 
 -- Chat app menu entry (CSP's online extras), when this CSP version has it.
 local function registerExtras()
-  if type(ui.registerOnlineExtra) ~= 'function' then return end
+  if not callable(ui.registerOnlineExtra) then return end
   pcall(ui.registerOnlineExtra, ui.Icons and (ui.Icons.Settings or ui.Icons.Info) or nil, 'CHT Drift Judge', function() return not app.passive end, function()
     U.text('CHT Drift Judge ' .. APP_VERSION, 15, U.col.text, true)
     if U.button(onlineUI.main and 'Fő ablak bezárása' or 'Fő ablak megnyitása', 180) then app.setOnlineMain(not onlineUI.main, 'chat menü') end
@@ -1259,8 +1262,8 @@ if platform.online then
       if onlineUI.hud then
         onlineWindow({ id = 'chtOnlineHud', title = 'CHT Drift HUD', posKey = 'onlineHudPos', sizeKey = 'onlineHudSize',
           defPos = { 30, 220 }, defSize = { 260, 420 }, transparent = true,
-          -- the HUD can be moved only while the main window is open (otherwise clicks go to the game)
-          inputs = onlineUI.main, bar = onlineUI.main }, function() Live.drawHud(app) end)
+          -- the HUD can be moved and resized only while the main window is open (otherwise clicks go to the game)
+          inputs = onlineUI.main, bar = onlineUI.main, resizable = onlineUI.main, minW = 180, minH = 120 }, function() Live.drawHud(app) end)
       end
       if onlineUI.main then
         local sw, sh = screenSize()
@@ -1274,7 +1277,8 @@ if platform.online then
               .. 'A Pálya fülön lehet készíteni egyet (ezen a gépen megmarad), vagy küldjétek el a meglévőt (Pálya fül → Másolás), és felkerül a szerverre.',
               ac.getTrackFullID('/'), tostring(app.remote.error)), 12, U.col.orange)
           end
-          ui.childWindow('##onlineMainBody', vec2(ui.availableSpaceX(), ui.availableSpaceY()), false, ui.WindowFlags.None, function()
+          -- (a 24 px strip stays free at the bottom for the resize grip: over the child it would get no clicks)
+          ui.childWindow('##onlineMainBody', vec2(ui.availableSpaceX(), math.max(60, ui.availableSpaceY() - 24)), false, ui.WindowFlags.None, function()
             script.windowMain(0)
           end)
         end)

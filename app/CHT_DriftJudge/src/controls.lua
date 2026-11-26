@@ -1,6 +1,12 @@
--- CHT Drift Judge – hotkeys (ac.ControlButton: the binding can be changed in Beállítások, CSP saves it).
--- Every call is guarded: if this CSP version has no ac.ControlButton, the buttons simply do nothing.
+-- CHT Drift Judge – hotkeys.
+-- Two ways, either one works:
+--   1. Ctrl+Shift+<letter> is checked by the program itself every frame (ac.isKeyDown), so it always
+--      works, whatever CSP did with the binding (CSP 0.3.0-preview120 turned our Ctrl+Shift default into
+--      Alt+<letter> – the test sheet showed „Alt+D”);
+--   2. the ac.ControlButton binding, which can be changed in Beállítások (CSP saves it).
+-- Every call is guarded: if this CSP version has neither, the keys simply do nothing.
 
+local callable = require('src/fn').callable
 local C = {}
 
 local function key(letter)
@@ -23,7 +29,7 @@ local buttons = {}
 C.available = false
 
 function C.init(online)
-  if type(ac.ControlButton) ~= 'function' then return end
+  if not callable(ac.ControlButton) then return end
   for _, d in ipairs(C.defs) do
     if online or not d.onlineOnly then
       local ok, b = pcall(ac.ControlButton, '__CHT_DRIFT_JUDGE_' .. d.id:upper(), key(d.letter))
@@ -35,11 +41,50 @@ function C.init(online)
   end
 end
 
+-- Own Ctrl+Shift+<letter> check ---------------------------------------------------------------------
+local wasDown = {}
+local comboPressed = {}
+local VK_SHIFT, VK_CONTROL, VK_MENU = 16, 17, 18
+local function down(k)
+  if not callable(ac.isKeyDown) then return false end
+  local ok, r = pcall(ac.isKeyDown, k)
+  return ok and r == true
+end
+
+-- Called once per frame, before C.pressed().
+function C.update()
+  local mods = down(VK_CONTROL) and down(VK_SHIFT) and not down(VK_MENU)
+  for _, d in ipairs(C.defs) do
+    local letter = string.byte(d.letter)
+    local isDown = mods and down(letter)
+    comboPressed[d.id] = isDown and not wasDown[d.id]
+    wasDown[d.id] = isDown
+  end
+end
+
 function C.pressed(id)
+  if comboPressed[id] then return true end
   local b = buttons[id]
   if not b then return false end
   local ok, r = pcall(b.pressed, b)
-  return ok and r == true
+  if not (ok and r == true) then return false end
+  -- the CSP binding is the same Ctrl+Shift+<letter> → already counted above (do not toggle twice)
+  if down(VK_CONTROL) and down(VK_SHIFT) then
+    for _, d in ipairs(C.defs) do if d.id == id and down(string.byte(d.letter)) then return false end end
+  end
+  return true
+end
+
+-- What to show: always Ctrl+Shift+<letter>; plus the CSP binding if it is something else.
+function C.text(id)
+  local def
+  for _, d in ipairs(C.defs) do if d.id == id then def = d end end
+  if not def then return '' end
+  local b = C.boundTo(id)
+  if b and b ~= '' and b:lower():gsub('%s', '') ~= def.defaultText:lower():gsub('%s', '') then
+    return def.defaultText .. ' vagy ' .. b
+  end
+  return def.defaultText
 end
 
 function C.boundTo(id)

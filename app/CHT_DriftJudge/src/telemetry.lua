@@ -1,5 +1,6 @@
 -- CHT Drift Judge – car state → plain sample tables + recorder (CSP only).
 
+local callable = require('src/fn').callable
 local telemetry = {}
 
 -- Order of values in recorded sample rows (keeps files compact: one array per frame).
@@ -28,7 +29,7 @@ local jumpSubscriptions = {}
 function telemetry.watchJumps(carIndex)
   if jumpSubscriptions[carIndex] then return end
   -- (the reset counter below catches resets too, if this CSP version has no ac.onCarJumped)
-  if type(ac.onCarJumped) ~= 'function' then jumpSubscriptions[carIndex] = true return end
+  if not callable(ac.onCarJumped) then jumpSubscriptions[carIndex] = true return end
   local ok, sub = pcall(ac.onCarJumped, carIndex, function(idx) jumpFlags[idx] = true end)
   jumpSubscriptions[carIndex] = ok and sub or true
 end

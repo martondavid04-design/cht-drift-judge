@@ -13,6 +13,7 @@
 -- Requests go one at a time (CSP allows two at once, and layouts are downloaded too); a failed send is
 -- retried 3 times (5 s, 20 s, 60 s later). The queue keeps at most 40 items / 8 MB, debug items go first.
 
+local callable = require('src/fn').callable
 local platform = require('src/platform')
 
 local M = {}
@@ -66,7 +67,7 @@ end
 -- While the installed app runs on the same PC, the online copy stays silent (the app sends).
 function M.enabled()
   if not app or app.passive then return false end
-  if type(web) ~= 'table' or type(web.post) ~= 'function' then return false end
+  if type(web) ~= 'table' or not callable(web.post) then return false end
   if platform.online then return platform.flag('upload') end
   return app.settings.ui.uploadData ~= false
 end
@@ -74,7 +75,7 @@ end
 function M.stateText()
   if not app then return 'nincs elindítva' end
   if not configured() then return 'nincs beállítva (hiányzik a táblázat címe)' end
-  if type(web) ~= 'table' or type(web.post) ~= 'function' then return 'ez a CSP nem tud adatot küldeni (nincs web.post)' end
+  if type(web) ~= 'table' or not callable(web.post) then return 'ez a CSP nem tud adatot küldeni (nincs web.post)' end
   if app.passive then return 'a telepített app küld ezen a gépen' end
   if platform.online and not platform.flag('upload') then return 'a szerver kikapcsolta (upload = 0)' end
   if not platform.online and app.settings.ui.uploadData == false then return 'kikapcsolva' end
@@ -129,7 +130,7 @@ local function push(kind, msg, what, opts)
   opts = opts or {}
   if not configured() then return false end
   if not opts.force and not M.enabled() then return false end
-  if type(web) ~= 'table' or type(web.post) ~= 'function' then return false end
+  if type(web) ~= 'table' or not callable(web.post) then return false end
   msg.key = M.key
   msg.session = M.sessionId
   msg.version = app.version
@@ -165,19 +166,19 @@ local function caps()
   local okC, code = pcall(ac.getPatchVersionCode)
   return {
     cspCode = okC and code or nil,
-    steamIDfn = type(ac.getUserSteamID) == 'function',
+    steamIDfn = callable(ac.getUserSteamID),
     steamID = platform.steamID(),
-    checkAdmin = type(ac.checkAdminPrivileges) == 'function',
-    registerOnlineExtra = type(ui.registerOnlineExtra) == 'function',
-    mouseDelta = type(ui.mouseDelta) == 'function',
-    toast = type(ui.toast) == 'function',
+    checkAdmin = callable(ac.checkAdminPrivileges),
+    registerOnlineExtra = callable(ui.registerOnlineExtra),
+    mouseDelta = callable(ui.mouseDelta),
+    toast = callable(ui.toast),
     controlButton = ac.ControlButton ~= nil,
-    onlineEvent = type(ac.OnlineEvent) == 'function',
+    onlineEvent = callable(ac.OnlineEvent),
     directMessaging = sim.directMessagingAvailable == true,
-    connect = type(ac.connect) == 'function',
-    onCarJumped = type(ac.onCarJumped) == 'function',
+    connect = callable(ac.connect),
+    onCarJumped = callable(ac.onCarJumped),
     storage = ac.storage ~= nil,
-    io = type(io) == 'table' and type(io.save) == 'function',
+    io = type(io) == 'table' and callable(io.save),
     onlineRace = sim.isOnlineRace == true,
     screen = screen(),
     fps = sim.fps and math.floor(sim.fps) or nil,
@@ -282,7 +283,7 @@ end
 function M.publishLayout(info, cb)
   if not app then if cb then cb(false, 'nincs elindítva') end return false end
   if not configured() then if cb then cb(false, 'nincs beállítva a táblázat címe') end return false end
-  if type(web) ~= 'table' or type(web.post) ~= 'function' then if cb then cb(false, 'ez a CSP nem tud adatot küldeni') end return false end
+  if type(web) ~= 'table' or not callable(web.post) then if cb then cb(false, 'ez a CSP nem tud adatot küldeni') end return false end
   local ok = push('layout', {
     type = 'layout', track = info.track, trackID = info.trackID, name = info.name,
     layoutText = (not info.deleted) and info.text or nil, deleted = info.deleted == true or nil,

@@ -10,6 +10,7 @@
 -- Presence: the installed app writes a heartbeat into a shared structure; if the online script (sent by
 -- the server) sees a fresh heartbeat on the same PC, it stays passive – no double HUD, drawing or sending.
 
+local callable = require('src/fn').callable
 local platform = require('src/platform')
 local storage = require('src/storage')
 
@@ -92,7 +93,7 @@ end
 function N.init(appRef)
   app = appRef
   N.load()
-  if type(ac.OnlineEvent) ~= 'function' or not ac.StructItem then return end
+  if not callable(ac.OnlineEvent) or not ac.StructItem then return end
   local ok, fn = pcall(ac.OnlineEvent, buildLayout(), function(sender, msg)
     local okR, err = pcall(N.receive, sender, msg)
     if not okR then N.lastError = tostring(err) end
@@ -133,7 +134,7 @@ local presence = nil
 local function presenceStruct()
   if presence ~= nil then return presence or nil end
   presence = false
-  if type(ac.connect) ~= 'function' or not ac.StructItem then return nil end
+  if not callable(ac.connect) or not ac.StructItem then return nil end
   local ok, p = pcall(ac.connect, {
     ac.StructItem.key('cht.driftjudge.presence.v1'),
     appBeat = ac.StructItem.double(),

@@ -6,6 +6,7 @@
 -- withoutIO), no app windows and read their settings from the [SCRIPT_…] section (ac.configValues).
 -- The bundle sets the global __CHT_ONLINE__ before anything else runs.
 
+local callable = require('src/fn').callable
 local P = {}
 
 P.online = rawget(_G, '__CHT_ONLINE__') == true
@@ -42,7 +43,7 @@ function P.flag(key) return flag(P.server[key]) end
 function P.steamID()
   if P._steam ~= nil then return P._steam or nil end
   local id = nil
-  if type(ac.getUserSteamID) == 'function' then
+  if callable(ac.getUserSteamID) then
     local ok, v = pcall(ac.getUserSteamID)
     if ok and v ~= nil and tostring(v) ~= '' and tostring(v) ~= '0' then id = tostring(v) end
   end
@@ -65,7 +66,7 @@ end
 
 P.adminCheckAt = 3                -- os.clock() of the next admin check
 function P.updateAdmin()
-  if not P.online or type(ac.checkAdminPrivileges) ~= 'function' then return end
+  if not P.online or not callable(ac.checkAdminPrivileges) then return end
   local t = os.clock()
   if t < P.adminCheckAt then return end
   P.adminCheckAt = t + (P.isAdmin() and 300 or 60)
@@ -117,12 +118,12 @@ function P.installedAppVersion()
   if installedChecked then return installedVersion end
   installedChecked = true
   local ok, v = pcall(function()
-    if type(io) ~= 'table' or type(io.load) ~= 'function' or type(ac.getFolder) ~= 'function' then return nil end
+    if type(io) ~= 'table' or not callable(io.load) or not callable(ac.getFolder) then return nil end
     local apps = ac.getFolder(ac.FolderID and ac.FolderID.ACApps or 23)
     if type(apps) ~= 'string' or apps == '' then return nil end
     local text = io.load(apps .. '/lua/CHT_DriftJudge/manifest.ini')
     if type(text) ~= 'string' or text == '' then
-      if type(io.dirExists) == 'function' and io.dirExists(apps .. '/lua/CHT_DriftJudge') then return '?' end
+      if callable(io.dirExists) and io.dirExists(apps .. '/lua/CHT_DriftJudge') then return '?' end
       return false
     end
     return text:match('VERSION%s*=%s*([%w%.%-]+)') or '?'

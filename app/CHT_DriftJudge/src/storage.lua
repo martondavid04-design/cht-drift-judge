@@ -5,6 +5,7 @@
 --   runs/<track id>/<date>_<driver>.json   (result + embedded layout + full telemetry)
 
 local storage = {}
+local callable = require('src/fn').callable
 local platform = require('src/platform')
 
 -- File backend -------------------------------------------------------------------------------------
@@ -48,7 +49,7 @@ if platform.online then
         end
       end
     end
-    storage.fixedPlace = type(ac.storageSetPath) == 'function' and pcall(ac.storageSetPath, 'cht_drift_judge') or false
+    storage.fixedPlace = callable(ac.storageSetPath) and pcall(ac.storageSetPath, 'cht_drift_judge') or false
     if storage.fixedPlace and old.cht_index and sget('cht_index') == nil then
       for k, v in pairs(old) do sset(k, v) end
       storage.movedOld = true
@@ -352,7 +353,7 @@ end
 function storage.importInstalledLayouts()
   if not platform.online then return {}, 'nem online' end
   local ok, res, why = pcall(function()
-    if type(io) ~= 'table' or type(io.load) ~= 'function' or type(io.scanDir) ~= 'function' then return {}, 'nincs fájlolvasás' end
+    if type(io) ~= 'table' or not callable(io.load) or not callable(io.scanDir) then return {}, 'nincs fájlolvasás' end
     local docs = ac.getFolder(ac.FolderID and ac.FolderID.ACDocuments or 'ACDocuments')
     if type(docs) ~= 'string' or docs == '' then return {}, 'nincs Dokumentumok mappa' end
     local dir = docs .. '/CHT Drift Judge/layouts/' .. storage.trackKey()
@@ -399,7 +400,7 @@ local function webNext()
 end
 
 local function webGet(url, cb)
-  if type(web) ~= 'table' or type(web.get) ~= 'function' then cb('nincs web.get') return end
+  if type(web) ~= 'table' or not callable(web.get) then cb('nincs web.get') return end
   webQueue[#webQueue + 1] = { url = url, cb = cb }
   webNext()
 end

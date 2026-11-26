@@ -5,6 +5,7 @@
 --  • Car: “Pont az autóhoz” adds a point at a chosen point of the car (rear corner, front wheel, centre).
 --  • Trace: while driving slowly along a painted line / wall, a point is added every few metres.
 
+local callable = require('src/fn').callable
 local geom = require('src/geom')
 local layoutMod = require('src/layout')
 local storage = require('src/storage')
@@ -662,7 +663,7 @@ local function layoutFiles()
   ui.sameLine()
   if U.button('Másolás', 0, false, 'A pályaterv (JSON) a vágólapra kerül: így is elküldhető (pl. Discordon).') then
     local ok, text = pcall(JSON.stringify, app.layout)
-    if ok and type(ac.setClipboardText) == 'function' and pcall(ac.setClipboardText, text) then
+    if ok and callable(ac.setClipboardText) and pcall(ac.setClipboardText, text) then
       app.status('A pályaterv a vágólapon (' .. tostring(#text) .. ' karakter). Küldd el, vagy töltsd fel a GitHubra: layouts/' .. storage.trackKey() .. '/' .. app.layout.name .. '.json', U.col.green, 10)
     else
       app.status('Nem sikerült a vágólapra másolni.', U.col.red)
