@@ -238,6 +238,30 @@ function M.role(info, cb)
   return ok
 end
 
+-- Competition (0.4.0, src/event.lua): the race director's PC saves the whole competition (Versenyek sheet +
+-- a Drive file per competition); the other PCs read it with ?action=event&id=… . A newer version replaces
+-- the one still waiting in the queue (only the latest matters). info: { id, name, rev, track, layout,
+-- director, phase, text = JSON }; cb(ok, err).
+function M.event(info, cb)
+  if not app then if cb then cb(false, 'nincs elindítva') end return false end
+  if not configured() then if cb then cb(false, 'nincs beállítva a táblázat címe') end return false end
+  if type(web) ~= 'table' or not callable(web.post) then if cb then cb(false, 'ez a CSP nem tud adatot küldeni') end return false end
+  for i = #queue, 1, -1 do
+    local it = queue[i]
+    if it.kind == 'event' and it.eventId == info.id and not (inFlight and inFlight.item == it) then
+      removeItem(it)
+      if it.cb then pcall(it.cb, false, 'újabb változat váltotta') end
+    end
+  end
+  local ok = push('event', {
+    type = 'event', id = tostring(info.id), name = info.name, rev = info.rev, track = info.track, layout = info.layout,
+    director = info.director, phase = info.phase, eventText = info.text, server = M.serverName(), steamId = platform.steamID(),
+  }, 'verseny: ' .. tostring(info.name) .. ' #' .. tostring(info.rev), { force = true, front = true, cb = cb })
+  if ok then queue[1].eventId = info.id end
+  if not ok and cb then cb(false, 'nem fért a küldési sorba') end
+  return ok
+end
+
 -- Runs -----------------------------------------------------------------------------------------------
 local tagNames = { megszakitott = 'megszakított', szabad = 'szabad felvétel' }
 

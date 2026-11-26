@@ -22,7 +22,7 @@ if platform.online then
   local dirs = {}
   local function norm(p) return (tostring(p):gsub('\\', '/'):gsub('//+', '/')) end
   local function parentOf(p) return norm(p):match('^(.*)/[^/]*$') end
-  local function persistent(p) return p:find('/settings%.json$') or p:find('/layouts/') or p:find('/biroi_levonasok%.json$') end
+  local function persistent(p) return p:find('/settings%.json$') or p:find('/layouts/') or p:find('/biroi_levonasok%.json$') or p:find('/versenyek/') end
 
   -- ac.storage keeps strings in an INI file: keys are slot numbers, values are escaped
   local okS, store = pcall(function() return ac.storage end)
@@ -155,6 +155,14 @@ end
 
 function storage.runsDir()
   local d = storage.root() .. '/runs/' .. storage.trackKey()
+  fs.createDir(d)
+  return d
+end
+
+-- Competitions (Verseny tab, 0.4.0): kept online too (the CSP storage), so a competition survives a
+-- reconnect of the race director's PC.
+function storage.eventsDir()
+  local d = storage.root() .. '/versenyek'
   fs.createDir(d)
   return d
 end

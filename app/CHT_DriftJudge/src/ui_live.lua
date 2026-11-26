@@ -138,6 +138,8 @@ local function angleGauge(angle, dir, size, cfg, flip)
   ui.dummy(vec2(size, size * 0.86))
 end
 
+Live.angleGauge = angleGauge -- (the broadcaster HUD uses it too)
+
 local function hbar(label, v, col, width, labelW, k, valueText)
   U.text(label, 13 * k, U.col.dim)
   ui.sameLine(labelW)

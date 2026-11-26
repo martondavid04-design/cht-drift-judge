@@ -54,7 +54,7 @@ def app_mode():
     fake_clock(L, up)
     for _ in range(3):
         stub.frameStep(1 / 60)
-    check(app.version.startswith('0.3.'), 'verzió ' + str(app.version))
+    check(app.version.startswith(('0.3.', '0.4.')), 'verzió ' + str(app.version))
     check(up.stateText() == 'bekapcsolva', 'alapból bekapcsolva (telepített app)')
     check(len(posts(stub)) == 0, 'belépéskor még nem küld (vár, amíg a pályaterv betölt)')
     advance(L, g, 9)

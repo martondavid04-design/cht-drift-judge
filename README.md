@@ -2,6 +2,8 @@
 
 Drift pontozó és bírói rendszer Assetto Corsához (Custom Shaders Patch, Lua) – a CornerHuntersTeam
 megrendelésére. 1. fázis: solo (kvalifikációs) pontozás zónákkal, pályaszerkesztő, telemetria.
+2. fázis (0.4.0): verseny – kvali-táblázat, Top 32 tábla, tandem csaták mérése és bírói szavazás,
+közvetítői HUD, gyorsítási / lassítási térkép.
 Pontozás: Drift Masters 2025 (Line 60 / Angle 20 / Stílus 20).
 
 ## Szerverről, telepítés nélkül
@@ -97,6 +99,22 @@ Pályát offline, a telepített appal lehet készíteni (egyjátékos mód), és
   első táblázat 2026-11-26-án megtelt és csak olvasható lett; az adatait az `atvetel()` hozta át, a
   régi felvételeket a script a régi webappból olvassa.
 
+## Verseny (0.4.0, 2. fázis)
+
+- `src/bracket.lua` (tiszta Lua): kvali-táblázat (első 2 futás, 3. esély, két nullás = kiesés, C13),
+  kiemelési sorrend és tábla (Top 4 / 8 / 16 / 32, bye-ok), továbbjutás, döntés a szavazatokból
+  (többség → OMT egyszer → kötelező döntés).
+- `src/tandem.lua`: egy tandem futás két solo bíróval (`scoring.newJudge`) és összehasonlítással:
+  közelség (≤3 m / 3–4 m / >4 m), indítás, szög, vonal, kontaktus hibajavaslattal (DM 1.16), előzés,
+  ellenkező irányú drift, abbahagyott drift, a lead gyorsítási / lassítási térképe (`src/decelmap.lua`).
+  A `telemetry.sample(car, t, own)` saját visszarakás-állapottal mintáz, hogy ne zavarja a fő bírót.
+- `src/event.lua`: a verseny (versenyigazgató gépe vezeti, `versenyek/<id>.json`), mentés a scriptbe
+  (`type = 'event'`, Versenyek lap + Drive-fájl), olvasás `?action=event&id=` / `?action=events&track=`.
+  Üzenetek: `cht.driftjudge.evt.v1` (élő állapot: csata, autók indexe, ki vezet, fázis, mentett változat),
+  `cht.driftjudge.vote.v1` (szavazat), `cht.driftjudge.tded.v1` (levonás / megjegyzés).
+- `src/ui_event.lua` (Verseny fül), `src/ui_broadcast.lua` (közvetítői HUD), `src/ui_decel.lua`
+  (Pálya fül 6. lépése).
+
 ## Pályatervek
 
 `layouts/<pálya kulcsa>/<név>.json` (és opcionálisan `layouts/<pálya kulcsa>/index.json`: a nevek
@@ -107,5 +125,5 @@ Pálya fülén a „Másolás” gombbal vihető ki.
 
 - `app/CHT_DriftJudge/` – a forrás (ugyanez fut telepítve és online)
 - `python3 tools/build.py` – elkészíti az `online/cht_drift_judge.lua` és a `dist/…zip` fájlt
-- `python3 tests/scenarios.py` és `python3 tests/smoke_038.py` … `smoke_0315.py` – offline tesztek CSP-csonkkal
+- `python3 tests/scenarios.py` és `python3 tests/smoke_038.py` … `smoke_040.py` – offline tesztek CSP-csonkkal
   (`pip install lupa`)

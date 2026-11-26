@@ -527,6 +527,37 @@ function draw3d.marker(p, color, text)
   render.setDepthMode(render.DepthMode.Normal)
 end
 
+-- Accel / decel map (A15): the reference line, coloured where the map has a segment (green / orange /
+-- red), grey elsewhere; metre marks every 25 m. cm = compiled map (src/decelmap.lua), path with y.
+draw3d.decelColors = { green = rgbm(0.2, 3, 0.4, 1), orange = rgbm(3, 1.4, 0.1, 1), red = rgbm(3, 0.2, 0.2, 1), none = rgbm(0.6, 0.6, 0.7, 0.6) }
+function draw3d.drawDecelMap(path, cm, labels)
+  if not path or #path < 2 then return end
+  render.setDepthMode(render.DepthMode.ReadOnlyLessEqual)
+  local s0 = 0
+  local nextMark = 0
+  for i = 1, #path - 1 do
+    local a, b = path[i], path[i + 1]
+    local seg = geom.dist(a.x, a.z, b.x, b.z)
+    local mid = s0 + seg / 2
+    local col = draw3d.decelColors.none
+    if cm then
+      for _, sg in ipairs(cm.segments) do
+        if mid >= sg.from and mid <= sg.to then col = draw3d.decelColors[sg.color] or col break end
+      end
+    end
+    local ya, yb = (a.y or 0) + 0.05, (b.y or 0) + 0.05
+    line(a.x, ya, a.z, b.x, yb, b.z, col)
+    line(a.x, ya + 0.04, a.z, b.x, yb + 0.04, b.z, col)
+    if labels and s0 >= nextMark then
+      v1:set(a.x, (a.y or 0) + 0.9, a.z)
+      render.debugText(v1, string.format('%.0f m', s0), col, 0.9)
+      nextMark = nextMark + 25
+    end
+    s0 = s0 + seg
+  end
+  render.setDepthMode(render.DepthMode.Normal)
+end
+
 -- Run trace (rear midpoints), coloured by angle.
 function draw3d.drawTrace(trace, y)
   if not trace or #trace < 2 then return end

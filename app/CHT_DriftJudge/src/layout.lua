@@ -10,10 +10,12 @@
 --               fullDist?, zeroDist?, angleTarget?, angleMin?, tiers? = {t1,t2,t3}, tngMode?,
 --               nogo = { { {x,y,z}, ... }, ... } }, -- optional no-go polygons belonging to this zone
 --             ... },
+--   decelMap? = { path, segments },  -- accel / decel map for the tandem lead (src/decelmap.lua, 0.4.0)
 -- }
 
 local geom = require('src/geom')
 local config = require('src/config')
+local decelmap = require('src/decelmap')
 
 local layout = {}
 
@@ -70,6 +72,7 @@ function layout.sanitize(l)
     r.tempoMin = math.min(300, tmin)
     if tfull and tfull > r.tempoMin then r.tempoFull = math.min(320, tfull) end
   end
+  r.decelMap = decelmap.sanitize(l.decelMap)
   if type(l.gates) == 'table' then
     for _, key in ipairs(layout.gateOrder) do
       local g = l.gates[key]
@@ -336,6 +339,7 @@ end
 function layout.compile(l, cfg)
   local c = { gates = {}, zones = {}, limits = {} }
   if l.tempoMin then c.tempo = { min = l.tempoMin, full = l.tempoFull } end
+  c.decel = decelmap.compile(l.decelMap)
   for key, g in pairs(l.gates) do
     c.gates[key] = { ax = g.a.x, az = g.a.z, bx = g.b.x, bz = g.b.z }
   end

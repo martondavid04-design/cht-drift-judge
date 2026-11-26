@@ -38,7 +38,9 @@ end
 local lastReset = {}
 
 -- Builds a sample for car `car` (ac.StateCar) at time `t` (seconds).
-function telemetry.sample(car, t)
+-- own (optional, 0.4.0): a table of its own for the reset detection, so a second sampler of the same car
+-- (the tandem tracker) does not take the reset / jump flags away from the main one.
+function telemetry.sample(car, t, own)
   local s = { t = t }
   local p = car.position
   s.px, s.py, s.pz = p.x, p.y, p.z
@@ -121,6 +123,11 @@ function telemetry.sample(car, t)
   s.dslip = telemetry.drivenSlip(car)
 
   local idx = car.index
+  if own then
+    if own.lastReset ~= nil and own.lastReset ~= car.resetCounter then s.jump = true end
+    own.lastReset = car.resetCounter
+    return s
+  end
   if jumpFlags[idx] then
     s.jump = true
     jumpFlags[idx] = false

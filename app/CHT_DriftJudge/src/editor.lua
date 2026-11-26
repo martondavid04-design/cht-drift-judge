@@ -11,6 +11,7 @@ local layoutMod = require('src/layout')
 local storage = require('src/storage')
 local draw3d = require('src/draw3d')
 local U = require('src/ui_common')
+local DecelUI = require('src/ui_decel')
 
 local editor = {}
 
@@ -1501,6 +1502,12 @@ function editor.drawTab()
   local tSub = l.tempoMin and string.format('minimum %.0f km/h · teljes pont %.0f km/h', l.tempoMin, l.tempoFull or (l.tempoMin + 10)) or 'nincs megadva (nem kötelező)'
   U.collapsible('ed_step5', '5. Minimális tempó', stepOpts(tSub, true, l.tempoMin and 'BEÁLLÍTVA' or 'NEM KÖTELEZŐ', l.tempoMin and 'ok' or 'info'), function()
     editor.tempoPanel()
+  end)
+
+  -- 6. Accel / decel map for tandem (optional, A15)
+  local dSub, dOk = DecelUI.summary(l)
+  U.collapsible('ed_step6', '6. Gyorsítási / lassítási térkép (tandem)', stepOpts(dSub, true, dOk and 'BEÁLLÍTVA' or 'NEM KÖTELEZŐ', dOk and 'ok' or 'info'), function()
+    DecelUI.panel(app, { pushUndo = pushUndo, changed = changed })
   end)
 end
 

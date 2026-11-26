@@ -1,9 +1,11 @@
-CHT DRIFT JUDGE – 0.3.15 (1. fázis: solo / kvalifikáció)
+CHT DRIFT JUDGE – 0.4.0 (2. fázis: verseny – kvalifikáció, Top 32 tábla, tandem, közvetítés)
 CornerHuntersTeam drift bírói rendszer Assetto Corsához
 =====================================================================
 
 TARTALOM
-  0. Új a 0.3.15-ben (a bírókat az admin jelöli ki a játékban; új adattáblázat), a 0.3.14-ben
+  0. Új a 0.4.0-ban (2. fázis: Verseny fül – kvali-táblázat, Top 32 tábla, tandem csaták mérése,
+     bírói szavazás és OMT; közvetítői HUD; gyorsítási / lassítási térkép), a 0.3.15-ben (a bírókat
+     az admin jelöli ki a játékban; új adattáblázat), a 0.3.14-ben
      (Versenyzők fül a bíróknak, néző mód, nagyobb szerkesztőpontok), a 0.3.13-ban
      (javítás: gyorsbillentyűk, átméretezés), a 0.3.12-ben (pályaterv egy
      gombbal mindenkinek), a 0.3.11-ben (a pályatervek frissítéskor
@@ -17,14 +19,57 @@ TARTALOM
   1. Telepítés
   2. Pályaterv készítése
   3. Futás és eredmény
-  4. TESZTELÉSI TERV – pontos lépések (T01–T66)
+  4. TESZTELÉSI TERV – pontos lépések (T01–T72)
   5. Mit küldjetek vissza
   6. Alapbeállítások
   7. Tesztjegyzőkönyv (kitöltendő minta)
 
 
-0. ÚJ A 0.3.15-BEN
-------------------
+0. ÚJ A 0.4.0-BAN (2. FÁZIS)
+---------------------------
+  • VERSENY FÜL (bíróknak, közvetítőnek, adminnak): egy gép vezeti a versenyt – a versenyigazgató
+    (szerveradmin vagy bíró; a telepített appban bárki). „Új verseny indítása”: onnantól a
+    kvalifikáció számít (a tesztkörök nem). A többi bíró és a közvetítő gépe magától követi
+    (a közös táblázatból és a szerveren át, pár másodperc alatt). A versenyigazgató gépén minden
+    elmentve marad (kilépés után is folytatható), ha a gépe kiesik, egy másik admin / bíró
+    „Átveszem a vezetést” gombbal folytatja.
+  • KVALIFIKÁCIÓ: pilótánként az első 2 futás számít, a jobb; két nullás = kiesés. Rangsor:
+    legjobb → második → a legjobb Line / Angle / Stílus pontja → a másodiké (C13). Kézzel:
+    „3. esély” (a 3. kör is számít), „Kivétel”, „Mégis továbbjut” (két nullás ellenére).
+    „Kvali táblázat másolása”, „Challonge lista másolása” (kiemelési sorrend, soronként egy név).
+  • TÁBLA: „Top 4 / 8 / 16 / 32” – a legjobbak bye-t kapnak (ellenfél nélkül tovább), kiemelés
+    1–32, 16–17, 8–25 … (a DM szerint 1 és 2 csak a döntőben találkozhat). A Tábla nézetben az egész
+    ágrajz, a győztesek zölddel; „Eredmények másolása”.
+  • TANDEM CSATA: „Élesítés” – a program a lead START-áthaladásától a FINISH-ig méri a két autót:
+      – közelség (a chase eleje a lead autójától): átlag, legkisebb, 3 m-en belül / 3–4 m („gyenge”) /
+        4 m fölött töltött idő (A14, A17 – nincs automatikus érvénytelenítés);
+      – indítás (a chase nem indíthat később, mint a lead), szög a leadhez képest, vonal (a chase
+        távolsága a lead nyomvonalától);
+      – kontaktus, és hogy kié lehet a hiba (DM 1.16: a leadé, ha elvesztette a driftet, elhagyta a
+        pályát vagy hirtelen lassított – különben a chase-é); előzés; ellenkező irányú drift;
+      – a lead gyorsítási / lassítási térképe (ha van a pályatervben);
+      – mindkét autó solo pontja (és a pilóták saját gépének eredménye);
+      – incomplete-javaslat: beforgás, 2 kerék kint, visszarakás, abbahagyta a driftet.
+    A 2. futás (csere: a másik vezet) magától élesedik. A futásonkénti pontjavaslat (lead 60 +
+    chase 40) CSAK TÁJÉKOZTATÓ. Bírói levonás és megjegyzés futásonként, pilótánként (A16).
+    „Utolsó futás törlése (újrafutás)”, „Futás lezárása most”, „Kamera: lead / chase”.
+  • DÖNTÉS: a bírók a saját gépükön szavaznak („A nyert” / „B nyert” / „One More Time”); a
+    szavazatok csak akkor látszanak, ha mind megérkezett. Eltérő szavazat → OMT (még egy futáspár),
+    utána kötelező dönteni; ha akkor sincs többség, a versenyigazgató dönt („Kézi döntés”). A
+    versenyigazgató a szóban (Discordon) mondott szavazatot is beírhatja. „Döntés visszavonása”, ha
+    tévedés volt. Minden döntés a Napló nézetben és a közös táblázatban (Versenyek lap) marad.
+  • KÖZVETÍTŐI HUD (B03, B04): Beállítások → Megjelenés → „Közvetítői HUD” (vagy a Verseny fülön a
+    gomb). Teljes képernyős, 1920×1080-ra tervezve: tandemben párosítás (kör, kiemelés, LEAD /
+    CHASE), a két autó egymás mellett (szög, sebesség, fordulatszám, fokozat, gáz / fék / kézifék /
+    kuplung, hajtás), közelség és kontaktus, a végén a továbbjutó; kvalifikációban a követett autó,
+    az utolsó futása és a kvali-táblázat. A telepített appban: „CHT Közvetítő HUD” ablak.
+  • GYORSÍTÁSI / LASSÍTÁSI TÉRKÉP (A15): Pálya fül → 6. lépés. Egy futás nyomvonala a vonal, rá a
+    szakaszok: ZÖLD (gyorsítás / tempótartás), NARANCS (kis tempóváltás, fék és kézifék nélkül),
+    PIROS (lassíthat). Méterben vagy az autóval odaállva („Itt”). A pályatervvel együtt mentődik.
+
+
+ÚJ A 0.3.15-BEN
+---------------
   • BÍRÓK ÉS KÖZVETÍTŐ KIJELÖLÉSE A JÁTÉKBAN: a szerveradmin a Versenyzők fülön minden fent lévő
     pilóta sorában a Pilóta / Bíró / Közvetítő gombbal ad szerepet. Steam ID-t nem kell gyűjteni:
     minden gép, amin fut a program, belépéskor elküldi a többinek a saját Steam ID-ját. A szerep pár
@@ -137,7 +182,7 @@ JAVÍTÁS A 0.3.13-BAN
     szerverről kapott mellett külön fut, és a saját (régi) verziószámát mutatja. A program most szól
     érte (üdvözlő üzenet, fő ablak, Beállítások). Teendő: kilépés után az
     assettocorsa\apps\lua\CHT_DriftJudge mappát nevezd át (pl. _CHT_DriftJudge-ra), vagy telepítsd
-    a legújabbat (GitHub: dist\CHT_DriftJudge_v0.3.15.zip). A 0.3.8-tól a telepített app szól a
+    a legújabbat (GitHub: dist\CHT_DriftJudge_v0.4.0.zip). A 0.3.8-tól a telepített app szól a
     szerverről kapottnak, és az ilyenkor csendben marad.
   • HA NINCS PÁLYATERV A SZERVEREN ehhez a pályához, a fő ablak tetején és a gombon is kiírja (zónák
     nélkül a program nem pontoz). A pályatervet a Pálya fül „Másolás” gombjával lehet elküldeni.
@@ -464,7 +509,7 @@ Content Manager ajánlott.
 
 A játékban a jobb oldali app-sávban két ablak jelenik meg:
   • CHT Drift Judge – a fő ablak (Élő, Eredmény, Futások, Pálya, Beállítások fülek).
-    A fejlécében látszik a verzió: v0.3.15 – ha nem ezt látod, a régi verzió fut.
+    A fejlécében látszik a verzió: v0.4.0 – ha nem ezt látod, a régi verzió fut.
   • CHT Drift HUD   – részletes kijelző: szög középről (bal / jobb), sebesség, fokozat,
     fordulatszám, kormányállás, gáz, fék, kézifék, kuplung, hajtás (van / nincs) és
     kerékkipörgés, zóna, hibák, utolsó pont. A HUD ablak fejlécében lévő fogaskerékkel
@@ -606,8 +651,8 @@ fejlécén látszik, kész-e. Ami hiányzik vagy hibás, az a Teendők panelen i
 4. TESZTELÉSI TERV – PONTOS LÉPÉSEK
 -----------------------------------
 ELŐKÉSZÜLETEK (minden tesztelőnél, egyszer):
-  1. Telepítsd a 0.3.15-at, és nézd meg, hogy a fő ablak fejlécében v0.3.15 látszik (a szerveren a
-     szerverről kapott változat fejlécében „v0.3.15 · online”).
+  1. Telepítsd a 0.4.0-t, és nézd meg, hogy a fő ablak fejlécében v0.4.0 látszik (a szerveren a
+     szerverről kapott változat fejlécében „v0.4.0 · online”).
   2. Beállítások fül → ha a fül neve „Beállítások (… mód.)”, nyomd meg a „Mind vissza
      alapra” gombot (és utána az „Igen, mind vissza alapra”-t). Így mindenki ugyanazzal a
      beállítással tesztel, és az eredmények összevethetők. Ha egy teszt kifejezetten
@@ -890,7 +935,7 @@ T50 – A program a szerverről (10 perc, a PrikezsiaGang szerveren)
   bejegyzés, próbáld ki.
   Elvárt: belépéskor az üzenet a gyorsbillentyűkkel, az első belépéskor a fő ablak magától
   megnyílik, a HUD látszik, zárt fő ablaknál a képernyő tetején a „CHT Drift Judge” gomb; a
-  fejlécben „v0.3.15 · online”; az ablakok
+  fejlécben „v0.4.0 · online”; az ablakok
   megnyílnak, mozgathatók; kilépés és újbóli belépés után ugyanott vannak.
   Írd fel: a CSP verziót; mit mutat az „Online változat és szerver” szekció minden sora (főleg a
   Steam ID és az „Üzenetek a szerveren” sor); hiba esetén a custom_shaders_patch.log-ot.
@@ -999,6 +1044,47 @@ T66 – Az új adattáblázat (1 gép)
   Lépések: menj 2 futást a szerveren, majd a Beállításokban nézd meg a „Tesztadatok küldése” részt.
   Elvárt: az „Elküldve” szám nő, nincs hiba. (A fejlesztő a táblázatban és a Drive-mappában látja a
   futásokat és a felvételeket.)
+
+=== A10 BLOKK – A 0.4.0 ÚJDONSÁGAI: VERSENY (kb. 1,5 óra, 4 gép: 2 pilóta, 1 bíró / versenyigazgató,
+    1 bíró vagy közvetítő – kevesebb géppel is megy, akkor a versenyigazgató a 2. bíró szavazatát beírja) ===
+
+T67 – Verseny indítása és kvalifikáció (minden gép a szerveren)
+  Előtte: a versenyigazgató admin vagy bíró (T65), a pályatervet mindenki betöltötte.
+  Lépések: a versenyigazgató: Verseny fül → „Új verseny indítása”. A pilóták menjenek 2–3 futást.
+  Elvárt: a Kvalifikáció nézetben a pilóták az első 2 futásuk szerint rangsorban (a 3. „+1”-ként
+  látszik, nem számít); a „3. esély” után a 3. is számít. A másik bíró gépén pár másodpercen belül
+  ugyanez a táblázat látszik (Verseny fül, „követés”).
+
+T68 – Tábla (versenyigazgató)
+  Lépések: Kvalifikáció → „Top 4” (vagy Top 8, ha van legalább 5 pilóta) → Tábla nézet.
+  Elvárt: a legjobb kiemeltek bye-t kapnak; a párosítás 1–4, 2–3 (Top 4) / 1–8, 4–5, 2–7, 3–6 (Top 8).
+  „Challonge lista másolása” → beilleszthető Challonge-ba (Bulk add).
+
+T69 – Tandem futás mérése (2 pilóta + versenyigazgató)
+  Lépések: Csata nézet → „Élesítés” → a két pilóta tandemben megy egy kört (a lead elöl).
+  Elvárt: a „Mérés ezen a gépen” sorban élőben a közelség (zöld 3 m-en belül, sárga 3–4 m,
+  narancs fölötte), a két szög és sebesség; a FINISH után a futás bekerül (közelség-statisztika,
+  indítás, szög, vonal, solo pontok, javaslat), és a 2. futás magától élesedik (a másik vezet).
+  Próbáljatok egy enyhe érintést is: „KONTAKTUS: 1”, és hogy kié lehet a hiba.
+
+T70 – Szavazás, OMT, döntés (2 bíró)
+  Lépések: a 2. futás után mindkét bíró a saját gépén szavaz – először eltérően (A és B).
+  Elvárt: One More Time; még egy futáspár, utána az OMT gomb nem nyomható; két egyező szavazat után
+  „NYERT: …”, a győztes a táblában továbblép. Levonás: egy futásnál írjatok be 2 pontot és egy
+  megjegyzést – a versenyigazgató gépén is megjelenik.
+
+T71 – Közvetítői HUD (közvetítő gép, 1920×1080)
+  Lépések: Beállítások → Megjelenés → Közvetítői HUD be; nézzétek kvalifikáció és tandem alatt is.
+  Elvárt: kvalifikációban a követett autó adatai, az utolsó futása és a kvali-táblázat; tandemben
+  fent a párosítás (LEAD / CHASE), két oldalt a két autó (szög, sebesség, fordulatszám, fokozat,
+  pedálok, hajtás), lent a közelség; a döntés után „TOVÁBBJUT: …”. A kattintás a játékba megy.
+
+T72 – Gyorsítási / lassítási térkép (1 gép)
+  Lépések: menj egy futást, Pálya fül → 6. lépés → „Útvonal a legutóbbi futásból”; vegyél fel egy
+  ZÖLD szakaszt („Itt” gombokkal vagy méterben) és egy PIROS-at; mentsd a pályatervet. Tandemben a
+  lead fékezzen a zöld szakaszon.
+  Elvárt: a pályán a vonal zöld / piros / szürke; a tandem futásnál „Gyorsítási / lassítási térkép:
+  1 eltérés – ZÖLD szakasz … m: fék”.
 
 === B BLOKK – MÁSODIK ALKALOM (kb. 1,5 óra) ===
 
@@ -1161,7 +1247,7 @@ a küszöböket, a pontozási arányt és a zónák távolságait.
 7. TESZTJEGYZŐKÖNYV (minta – másold ki egy jegyzetbe vagy táblázatba)
 ---------------------------------------------------------------------
 Tesztelő neve: ............   Dátum: ............   Pálya: ............   Autó: ............
-Kormány / pedál: ............   App verzió (fejléc): v0.3.15   CSP verzió: ............
+Kormány / pedál: ............   App verzió (fejléc): v0.4.0   CSP verzió: ............
 
 Teszt | Futás ideje (Eredmény fül) | Mit csináltam | Mit várt a bíró | Mit mutatott a program | Megjegyzés
 ------+----------------------------+---------------+-----------------+------------------------+-----------

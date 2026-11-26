@@ -1,9 +1,11 @@
 -- CHT Drift Judge – CornerHuntersTeam drift judging app for Assetto Corsa (CSP Lua)
 -- Phase 1: solo (qualifying) judging, in-game layout editor, telemetry recording.
+-- Phase 2 (0.4.0): competition – qualifying table, Top 32 bracket, tandem battles with the judges' votes,
+-- broadcaster HUD (src/event.lua, src/bracket.lua, src/tandem.lua, src/ui_event.lua, src/ui_broadcast.lua).
 -- The same code runs as an installed Lua app (apps/lua/CHT_DriftJudge) and as an online script that the
 -- server sends to every player (one bundled file from GitHub, see tools/build.py and src/platform.lua).
 
-local APP_VERSION = '0.3.15'
+local APP_VERSION = '0.4.0'
 
 local callable = require('src/fn').callable
 local config = require('src/config')
@@ -28,6 +30,9 @@ local netsync = require('src/netsync')
 local Drivers = require('src/ui_drivers')
 local roles = require('src/roles')
 local upload = require('src/upload')
+local event = require('src/event')
+local EventUI = require('src/ui_event')
+local Broadcast = require('src/ui_broadcast')
 
 local app = {
   version = APP_VERSION,
@@ -42,6 +47,8 @@ local app = {
 app.platform = platform
 app.netsync = netsync
 app.upload = upload
+app.drivers = Drivers
+app.event = event
 app.cfg = config.merge(app.settings.scoring)
 if visibility.migrate(app.settings) then storage.saveSettings(app.settings) end
 -- 0.3.14: the judged car follows the camera by default (spectator mode). Older settings had 'own' as
@@ -452,6 +459,8 @@ upload.init(app)
 roles.init(app)
 app.roles = roles
 netsync.onRolePing = roles.onPing
+event.autoNext = app.settings.ui.eventAutoNext ~= false
+event.init(app)
 if rawget(_G, '__STUB') then _G.__CHT_APP = app end -- offline smoke tests only
 
 -- Shared layouts (everyone gets the same ones) -------------------------------------------------------
@@ -722,7 +731,14 @@ local function updateFrame(dt)
   roles.update()
   storage.webTick()
   if statusUntil > 0 and now() > statusUntil then app.statusMessage, statusUntil = nil, 0 end
-  if sim.isReplayActive or sim.isPaused or sim.dt <= 0 then return end
+  -- competition (0.4.0): messages, saving, the tandem run measured on this PC
+  local paused = sim.isReplayActive or sim.isPaused or sim.dt <= 0
+  local okE, errE = pcall(event.update, paused and 0 or sim.dt)
+  if not okE then
+    status('Belső hiba a versenyben: ' .. tostring(errE), U.col.red, 15)
+    upload.debug('error', 'verseny', errE)
+  end
+  if paused then return end
   local car = app.car()
   if not car then return end
   if app.watchedCar ~= car.index then
@@ -822,6 +838,11 @@ local function drawTrack()
   end
   if vis('trace') and app.lastResult and app.resultLayout == app.layout then
     draw3d.drawTrace(app.lastResult.trace)
+  end
+  -- accel / decel map (tandem): on the Pálya tab, or always if switched on in the settings
+  local dm = app.layout and app.layout.decelMap
+  if dm and dm.path and #dm.path >= 2 and (ed or ui_.decelAlways == true) and visibility.masterOn(app.settings) then
+    draw3d.drawDecelMap(dm.path, app.compiled and app.compiled.decel, ed)
   end
   editor.render3D()
 end
@@ -1086,6 +1107,16 @@ function script.windowMain(dt)
         end)
       end)
     end
+    -- competition (0.4.0): the race director, the judges and the broadcaster
+    if platform.canSeeScores() then
+      local evTitle = 'Verseny'
+      if event.ev then evTitle = evTitle .. (event.isDirector() and ' (vezeted)' or ' ●') end
+      ui.tabItem(evTitle .. '###evTab', tabFlags('event'), function()
+        ui.childWindow('##evt', vec2(ui.availableSpaceX(), ui.availableSpaceY() - 22), false, ui.WindowFlags.None, function()
+          EventUI.drawTab(app)
+        end)
+      end)
+    end
     ui.tabItem('Pálya' .. (app.dirty and ' *' or '') .. (nZoneErr > 0 and string.format(' (%d hiba)', nZoneErr) or '') .. '###palyaTab', tabFlags('editor'), function()
       app.editorSeenAt = os.clock()
       ui.childWindow('##ed', vec2(ui.availableSpaceX(), ui.availableSpaceY() - 22), false, ui.WindowFlags.None, function()
@@ -1112,6 +1143,14 @@ end
 function script.windowHudSettings(dt)
   Live.drawHudSettings(app)
   flushSave()
+end
+
+-- Installed app: the broadcaster HUD window (draws over the whole screen wherever the window is).
+function script.windowBroadcast(dt)
+  local okU, uiState = pcall(ac.getUI)
+  local sz = okU and uiState and uiState.windowSize
+  local sw, sh = (sz and sz.x and sz.x > 100) and sz.x or 1920, (sz and sz.y and sz.y > 100) and sz.y or 1080
+  Broadcast.drawInWindow(app, sw, sh)
 end
 
 -- Online windows (the server sends the program as an online script: there are no app windows) ---------
@@ -1309,6 +1348,10 @@ if platform.online then
     local ok, err = pcall(function()
       trackMouse()
       welcome()
+      if app.settings.ui.broadcastHud == true then
+        local sw, sh = screenSize()
+        Broadcast.drawOnline(app, sw, sh)
+      end
       launcher()
       if onlineUI.hud then
         onlineWindow({ id = 'chtOnlineHud', title = 'CHT Drift HUD', posKey = 'onlineHudPos', sizeKey = 'onlineHudSize',

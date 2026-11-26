@@ -21,6 +21,7 @@ schema.uiDefaults = {
   depthOff = false, showBands = true,
   showCarPoint = false, autoOpenResult = true, saveAborted = false, carMode = 'auto', todoMode = 'panel',
   fillAlpha = 0.25, pointSize = 1.0, showPaintTool = false,
+  broadcastHud = false, broadcastQuali = true, decelAlways = false, eventAutoNext = true,
 }
 
 schema.groups = {
@@ -316,6 +317,15 @@ schema.items = {
   { key = 'pointSize', store = 'ui', group = 'display', kind = 'slider', min = 0.5, max = 3, fmt = '%.1f×', impact = 'display',
     label = 'Zónapontok mérete (szerkesztő)', desc = 'A lerakott zónapontok jelölőjének mérete a pályán: talpkorong fekete kerettel, egy oszlop és a pont sorszáma. Az első pont zöld, az utolsó lila, a többi fehér – így minden zónaszín és az aszfalt mellett is jól látszik.',
     effect = 'a pályán látható rajz (szerkesztés közben)', keywords = 'pont méret nagyobb jelölő szerkesztő kontraszt' },
+  { key = 'broadcastHud', store = 'ui', group = 'display', kind = 'bool', impact = 'display',
+    label = 'Közvetítői HUD (teljes képernyő)', desc = 'A közvetítéshez (Streamlabs, 1920×1080): tandemben a párosítás, a két autó adatai egymás mellett (szög, sebesség, fordulatszám, fokozat, pedálok, hajtás), a közelség és a győztes; kvalifikációban a követett autó, az utolsó futása és a kvali-táblázat. Online ezzel kapcsol be, a telepített appban a „CHT Közvetítő HUD” ablakkal.',
+    effect = 'a képernyő (közvetítés)', keywords = 'stream közvetítés streamer broadcast obs streamlabs overlay' },
+  { key = 'broadcastQuali', store = 'ui', group = 'display', kind = 'bool', impact = 'display',
+    label = 'Kvali-táblázat a közvetítői HUD-on', desc = 'Kvalifikáció alatt a jobb oldalon a rangsor (az első 16). Tandem csata alatt nem látszik.',
+    effect = 'a közvetítői HUD', keywords = 'stream rangsor tabella' },
+  { key = 'decelAlways', store = 'ui', group = 'display', kind = 'bool', impact = 'display',
+    label = 'Gyorsítási / lassítási térkép mindig látszik', desc = 'A pályaterv tandem-térképe (zöld / narancs / piros vonal) nemcsak a Pálya fülön látszik, hanem mindig (pl. a bíróknak tandem alatt).',
+    effect = 'a pályán látható rajz', keywords = 'accel decel map tandem térkép' },
   { key = 'showPaintTool', store = 'ui', group = 'display', kind = 'bool', impact = 'display',
     label = 'Zóna a festésből eszköz (kísérleti)', desc = 'A Pálya fülön megjelenik a „Zóna a festésből” eszköz, ami a festett vonalakból rak le zónát. A CHT szerint nincs rá szükség (D20), ezért alapból rejtve van.',
     effect = 'a Pálya fül zóna listája', keywords = 'festés paint felismerés automatikus' },

@@ -34,8 +34,14 @@ local function finalOf(app, r)
 end
 
 -- All drivers with their runs for the current layout (or all layouts), ranked.
-function D.collect(app)
+-- opts (0.4.0, the Verseny tab): { layout = name, allLayouts = bool } instead of the tab's own filters.
+function D.collect(app, opts)
   local layoutName = app.layout and app.layout.name
+  local allLayouts = allLayouts
+  if opts then
+    allLayouts = opts.allLayouts == true
+    if opts.layout and opts.layout ~= '' then layoutName = opts.layout end
+  end
   local map, list = {}, {}
   local function get(name, carIndex)
     local k = tostring(name or '?')

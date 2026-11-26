@@ -258,6 +258,12 @@ local function newCar(i)
   return car
 end
 STUB.cars = { [0] = newCar(0), [1] = newCar(1) }
+-- more cars on the server (tandem tests): STUB.addCar(2)
+function STUB.addCar(i)
+  STUB.cars[i] = newCar(i)
+  if STUB.sim and STUB.sim.carsCount <= i then STUB.sim.carsCount = i + 1 end
+  return STUB.cars[i]
+end
 STUB.sim = { time = 0, dt = 1 / 60, focusedCar = 0, isReplayActive = false, isPaused = false, systemTime = 1795000000,
   cameraPosition = vec3(0, 50, 0), cameraLook = vec3(0, -1, 0), cameraFOV = 60, carsCount = 2,
   directMessagingAvailable = true, directUDPMessagingAvailable = true, isOnlineRace = __STUB_ONLINE == true }

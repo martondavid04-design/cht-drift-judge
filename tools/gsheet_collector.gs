@@ -11,7 +11,10 @@
  *   type = 'debug'    hibák és a festésfelismerés adatai (Debug lap, a legutóbbi 3000 sor marad)
  *   type = 'layout'   „Feltöltés mindenkinek”: egy pályaterv mindenkinek (Pályatervek lap, minden változat megmarad)
  *   type = 'role'     egy szerveradmin a játékban bíróvá / közvetítővé / pilótává teszi valakit (Szerepek lap)
+ *   type = 'event'    verseny (0.4.0): a versenyigazgató gépe a teljes versenyt küldi (kvali-táblázat, ágrajz,
+ *                     tandem futások, szavazatok); versenyenként egy Drive-fájl (felülírva) + egy sor a Versenyek lapon
  * Kulcs nélkül (ezt kéri le a program): ?action=layouts&track=<pálya kulcsa> · ?action=roles
+ *   · ?action=events&track=<pálya kulcsa> (a pálya versenyei) · ?action=event&id=<verseny ID> (egy verseny)
  *   (a szerepeknél a Steam ID helyett csak egy ujjlenyomat megy ki, lásd hashId_)
  * Olvasás (olvasó kulccsal): ?key=…&action=ping | stats | runs | debug | sessions | roles_full | telemetry&run=<futás ID>
  *
@@ -44,7 +47,10 @@ const SHEETS = {
   'Pályatervek': ['Feltöltve', 'Pálya', 'Név', 'Szerző', 'Verzió', 'Mód', 'Zónák', 'Bájt (tömörítve)', 'Részek', 'Pálya (AC)',
     'Adat (gzip, base64) →'],
   'Szerepek': ['Idő', 'Steam ID', 'Név', 'Szerep', 'Kijelölte', 'Kijelölő Steam ID', 'Kijelölő admin', 'Szerver', 'Verzió', 'Munkamenet'],
+  'Versenyek': ['Frissítve', 'Verseny ID', 'Név', 'Változat', 'Fázis', 'Pálya', 'Pályaterv', 'Versenyigazgató', 'Steam ID', 'Szerver',
+    'Verzió', 'Fájl', 'Bájt', 'Munkamenet'],
 };
+const EVENT_MAX = 4 * 1024 * 1024;   // egy verseny legfeljebb ennyi karakter (JSON)
 const LAYOUT_MAX = 3 * 1024 * 1024;  // egy pályaterv legfeljebb ennyi karakter
 
 function sheet_(name) {
@@ -140,6 +146,7 @@ function doPost(e) {
       if (m.type === 'debug') return out_(debug_(m));
       if (m.type === 'layout') return out_(layout_(m));
       if (m.type === 'role') return out_(role_(m));
+      if (m.type === 'event') return out_(event_(m));
       return out_({ ok: false, error: 'type' });
     } finally {
       lock.releaseLock();
@@ -281,6 +288,77 @@ function roles_() {
   return out;
 }
 
+// Versenyek (0.4.0) ------------------------------------------------------------------------------------
+function eventId_(v) { v = String(v || ''); return /^[A-Za-z0-9_\-]{1,40}$/.test(v) ? v : ''; }
+function eventRow_(sh, id) {
+  const last = sh.getLastRow();
+  if (last < 2) return 0;
+  const ids = sh.getRange(2, 2, last - 1, 1).getValues();
+  for (let i = ids.length - 1; i >= 0; i--) if (String(ids[i][0]).replace(/^'/, '') === id) return i + 2;
+  return 0;
+}
+function updateFile_(id, bytes) {
+  drive_('https://www.googleapis.com/upload/drive/v3/files/' + encodeURIComponent(id) + '?uploadType=media&fields=id', {
+    method: 'patch', contentType: 'application/gzip', payload: bytes,
+  });
+  return id;
+}
+function event_(m) {
+  const c = common_(m);
+  const id = eventId_(m.id);
+  if (!id) return { ok: false, error: 'id' };
+  const text = String(m.eventText || '');
+  if (!text || text.length > EVENT_MAX) return { ok: false, error: 'size' };
+  let data;
+  try { data = JSON.parse(text); } catch (err) { return { ok: false, error: 'json' }; }
+  if (!data || data.format !== 'cht-drift-event' || String(data.id) !== id) return { ok: false, error: 'format' };
+  const rev = Number(m.rev) || 0;
+  const sh = sheet_('Versenyek');
+  const row = eventRow_(sh, id);
+  const bytes = Utilities.gzip(Utilities.newBlob(text, 'application/json')).getBytes();
+  let file = '';
+  if (row) {
+    const old = sh.getRange(row, 1, 1, SHEETS['Versenyek'].length).getValues()[0];
+    if (rev < Number(old[3])) return { ok: false, error: 'stale', rev: Number(old[3]) };
+    file = String(old[11]).replace(/^'/, '');
+  }
+  if (file) {
+    try { updateFile_(file, bytes); } catch (err) { file = ''; }
+  }
+  if (!file) file = saveFile_('verseny_' + fileName_(id) + '.json.gz', bytes);
+  const values = [now_(), txt_(id, 40), txt_(m.name, 120), rev, txt_(m.phase, 20), txt_(trackKey_(m.track), 160), txt_(m.layout, 120),
+    txt_(m.director || c.driver, 80), txt_(steam_(m.steamId), 24), txt_(m.server, 120), c.version, txt_(file, 80), bytes.length, c.session];
+  if (row) sh.getRange(row, 1, 1, values.length).setValues([values]);
+  else sh.appendRow(values);
+  return { ok: true, id: id, rev: rev };
+}
+function eventLoad_(id) {
+  id = eventId_(id);
+  if (!id) return null;
+  const sh = sheet_('Versenyek');
+  const row = eventRow_(sh, id);
+  if (!row) return null;
+  const file = String(sh.getRange(row, 12).getValue()).replace(/^'/, '');
+  return file ? loadFile_(file) : null;
+}
+function events_(track) {
+  track = trackKey_(track);
+  const sh = sheet_('Versenyek');
+  const last = sh.getLastRow();
+  if (last < 2) return [];
+  const vals = sh.getRange(2, 1, last - 1, 8).getValues();
+  const out = [];
+  vals.forEach(function (r) {
+    const t = String(r[5]).replace(/^'/, '');
+    if (track && t !== track) return;
+    out.push({ id: String(r[1]).replace(/^'/, ''), name: String(r[2]).replace(/^'/, ''), rev: Number(r[3]), phase: String(r[4]).replace(/^'/, ''),
+      track: t, layout: String(r[6]).replace(/^'/, ''), director: String(r[7]).replace(/^'/, ''),
+      updated: r[0] instanceof Date ? Utilities.formatDate(r[0], TZ, 'yyyy-MM-dd HH:mm:ss') : String(r[0]) });
+  });
+  out.sort(function (a, b) { return a.updated < b.updated ? 1 : -1; });
+  return out.slice(0, 20);
+}
+
 // Olvasás --------------------------------------------------------------------------------------------
 function rows_(name, limit) {
   const sh = sheet_(name);
@@ -336,6 +414,16 @@ function doGet(e) {
   if (p.action === 'roles') {
     try { return out_({ ok: true, roles: roles_() }); }
     catch (err) { return out_({ ok: false, error: String(err) }); }
+  }
+  if (p.action === 'events') {
+    try { return out_({ ok: true, events: events_(p.track) }); }
+    catch (err) { return out_({ ok: false, error: String(err) }); }
+  }
+  if (p.action === 'event') {
+    try {
+      const ev = eventLoad_(p.id);
+      return out_(ev ? { ok: true, event: ev } : { ok: false, error: 'nincs ilyen verseny' });
+    } catch (err) { return out_({ ok: false, error: String(err) }); }
   }
   if (!READ_KEY || READ_KEY === 'IDE_JON_AZ_OLVASO_KULCS' || p.key !== READ_KEY) return out_({ ok: false, error: 'key' });
   const limit = Math.max(1, Math.min(2000, Number(p.limit) || 50));
