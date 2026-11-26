@@ -3,7 +3,7 @@
 -- The same code runs as an installed Lua app (apps/lua/CHT_DriftJudge) and as an online script that the
 -- server sends to every player (one bundled file from GitHub, see tools/build.py and src/platform.lua).
 
-local APP_VERSION = '0.3.11'
+local APP_VERSION = '0.3.12'
 
 local config = require('src/config')
 local layoutMod = require('src/layout')
@@ -154,11 +154,8 @@ end
 
 function app.saveLayout()
   app.layout.track = ac.getTrackFullID('/')
-  if platform.online and app.serverLayouts[app.layout.name] then
-    -- the server's copy stays as it is: an online edit is saved on this PC under another name
-    app.layout.name = app.layout.name .. ' (helyi)'
-    status('A szerver pályatervét nem írom felül: a módosítás „' .. app.layout.name .. '” néven ezen a gépen marad. Véglegesítéshez a Pálya fülön a „Másolás” gombbal küldd el.', U.col.orange, 12)
-  end
+  -- (a shared layout edited here is saved under its own name; the shared copy is only replaced when
+  -- someone uploads a new one, and then this one is kept as „<name> (helyi)” – see syncOne)
   if storage.saveLayout(app.layout) then
     app.dirty = false
     app.settings.activeLayouts[storage.trackKey()] = app.layout.name
@@ -422,64 +419,214 @@ netsync.init(app)
 upload.init(app)
 if rawget(_G, '__STUB') then _G.__CHT_APP = app end -- offline smoke tests only
 
--- Online: layouts come from the server's GitHub folder ------------------------------------------------
--- layouts/<track>/index.json (optional list of names) and layouts/<track>/<name>.json. A downloaded
--- layout is kept on the PC (CSP storage), so the next join works even before the download finishes.
-function app.loadServerLayouts(force)
-  if not platform.online then return end
-  app.remote = { state = 'loading', names = {}, started = os.clock() }
-  local wanted = tostring(platform.server.layout or '')
-  local function fetchOne(name, makeActive)
-    storage.fetchJSON(storage.remoteLayoutURL(name), function(err, data)
-      if err or type(data) ~= 'table' then
-        if makeActive then
-          app.remote.state = 'error'
-          app.remote.error = string.format('„%s”: %s', name, tostring(err))
-        end
-        return
-      end
-      local l = layoutMod.sanitize(data)
-      l.name = name
-      -- a layout of the same name made on this PC (not from the server) is kept as „<name> (helyi)”
-      if not app.serverLayouts[name] and storage.fs.fileExists(storage.layoutPath(name)) then
-        local mine = storage.readJSON(storage.layoutPath(name))
-        local okA, a = pcall(JSON.stringify, mine and mine.zones)
-        local okB, b = pcall(JSON.stringify, l.zones)
-        if mine and not (okA and okB and a == b) and not storage.fs.fileExists(storage.layoutPath(name .. ' (helyi)')) then
-          mine.name = name .. ' (helyi)'
-          storage.writeJSON(storage.layoutPath(mine.name), mine)
-          status('A gépen lévő „' .. name .. '” pályaterv megmaradt „' .. mine.name .. '” néven (a szerveré lett az eredeti név).', U.col.orange, 12)
-        end
-      end
-      storage.writeJSON(storage.layoutPath(name), l)
-      app.serverLayouts[name] = true
-      app.remote.names[#app.remote.names + 1] = name
-      if makeActive then
-        app.remote.state = 'ok'
-        app.remote.active = name
-        local cur = app.layout
-        local curIsServer = cur and app.serverLayouts[cur.name]
-        if force or not cur or #cur.zones == 0 or curIsServer or cur.name == name then
-          if not app.judge or app.judge.state == 'idle' then
-            app.loadLayout(name)
-            status('Pályaterv a szerverről: ' .. name, U.col.green, 6)
-          end
-        end
-      end
-    end)
+-- Shared layouts (everyone gets the same ones) -------------------------------------------------------
+-- Two sources, both downloaded when the program starts and with „Frissítés a szerverről”:
+--   GitHub: layouts/<track>/index.json (list of names) and layouts/<track>/<name>.json (checked by the developer)
+--   the Google script: layouts uploaded with „Feltöltés mindenkinek” (newer, so they win for the same name)
+-- Nothing made on this PC is lost: a layout edited here stays until the shared one changes; if both
+-- changed, the one from here is kept as „<name> (helyi)”. settings.layoutSync[track][name] = fingerprint
+-- of the shared text last written here. Works the same in the installed app and in the online version.
+local function syncRecord()
+  if type(app.settings.layoutSync) ~= 'table' then app.settings.layoutSync = {} end
+  local key = storage.trackKey()
+  if type(app.settings.layoutSync[key]) ~= 'table' then app.settings.layoutSync[key] = {} end
+  return app.settings.layoutSync[key]
+end
+
+local function uniqueLocalName(name)
+  local n, i = name .. ' (helyi)', 2
+  while storage.fs.fileExists(storage.layoutPath(n)) do n, i = string.format('%s (helyi %d)', name, i), i + 1 end
+  return n
+end
+
+-- Same layout, even if written out differently (key order, number format)? Gates and zones are compared.
+local function canon(v)
+  local t = type(v)
+  if t == 'number' then return string.format('%.4f', v) end
+  if t ~= 'table' then return tostring(v) end
+  local keys = {}
+  for k in pairs(v) do keys[#keys + 1] = k end
+  table.sort(keys, function(a, b) return tostring(a) < tostring(b) end)
+  local out = {}
+  for _, k in ipairs(keys) do out[#out + 1] = tostring(k) .. '=' .. canon(v[k]) end
+  return '{' .. table.concat(out, ',') .. '}'
+end
+local function sameContent(a, b)
+  local okA, da = pcall(JSON.parse, a or '')
+  local okB, db = pcall(JSON.parse, b or '')
+  if not (okA and okB and type(da) == 'table' and type(db) == 'table') then return false end
+  return canon({ da.zones, da.gates }) == canon({ db.zones, db.gates })
+end
+
+-- Returns 'same' | 'new' | 'updated' | 'kept' | 'moved' (+ the name the local one was kept under).
+local function syncOne(name, remoteText)
+  local rec = syncRecord()
+  local path = storage.layoutPath(name)
+  local localText = storage.readText(path)
+  local rh = storage.textHash(remoteText)
+  app.serverLayouts[name] = true
+  if localText == remoteText then rec[name] = rh return 'same' end
+  if localText and localText ~= '' and sameContent(localText, remoteText) then
+    storage.writeText(path, remoteText); rec[name] = rh
+    return 'same'
   end
+  if not localText or localText == '' then storage.writeText(path, remoteText); rec[name] = rh return 'new' end
+  if rec[name] == rh then return 'kept' end -- the shared one did not change: the edits made here stay
+  if rec[name] ~= nil and storage.textHash(localText) == rec[name] then
+    storage.writeText(path, remoteText); rec[name] = rh
+    return 'updated'
+  end
+  local keep = uniqueLocalName(name)
+  storage.writeText(storage.layoutPath(keep), localText)
+  storage.writeText(path, remoteText); rec[name] = rh
+  return 'moved', keep
+end
+
+function app.syncSharedLayouts(force)
+  local key = storage.trackKey()
+  app.remote = { state = 'loading', names = {}, started = os.clock(), errors = {}, from = {} }
+  local remote = app.remote
+  local github, sheet = {}, {}
+  local githubIndex = nil
+  local pending = 2
+
+  local function apply()
+    if app.remote ~= remote then return end -- a newer sync started meanwhile
+    local got = {}
+    for n, t in pairs(github) do got[n] = { text = t, from = 'GitHub' } end
+    for n, l in pairs(sheet) do got[n] = { text = l.text, from = 'feltöltve: ' .. tostring(l.author or '?') .. ', ' .. tostring(l.time or '') } end
+    local names = {}
+    for n in pairs(got) do names[#names + 1] = n end
+    table.sort(names)
+    local changed, moved = {}, {}
+    for _, n in ipairs(names) do
+      local r, keep = syncOne(n, got[n].text)
+      remote.from[n] = got[n].from
+      if r == 'new' or r == 'updated' or r == 'moved' then changed[n] = true end
+      if r == 'moved' then moved[#moved + 1] = string.format('„%s” → „%s”', n, keep) end
+    end
+    remote.names = names
+    storage.saveSettings(app.settings)
+    if #names == 0 then
+      remote.state = (#remote.errors > 0) and 'error' or 'none'
+      remote.error = #remote.errors > 0 and table.concat(remote.errors, '; ') or 'ehhez a pályához nincs közös pályaterv'
+      return
+    end
+    remote.state = 'ok'
+    -- which one to use: online the server decides (its `layout` key, else the first of the list / Alap);
+    -- the installed app keeps the one chosen on this PC, unless it has none
+    local wanted = platform.online and tostring(platform.server.layout or '') or ''
+    if wanted == '' or not got[wanted] then
+      wanted = (githubIndex and githubIndex[1] and got[githubIndex[1]] and githubIndex[1]) or (got['Alap'] and 'Alap') or names[1]
+    end
+    remote.wanted = wanted
+    local cur = app.layout
+    local curName = cur and cur.name
+    local function unedited(n) return got[n] ~= nil and storage.readText(storage.layoutPath(n)) == got[n].text end
+    local target = nil
+    if not cur or #cur.zones == 0 then
+      target = wanted
+    elseif platform.online and curName ~= wanted and (force or (app.serverLayouts[curName] and unedited(curName))) then
+      target = wanted -- online the server decides (a layout edited here stays until switched by hand)
+    elseif curName and changed[curName] then
+      target = curName -- the one in use got a new version
+    elseif platform.online and not storage.fs.fileExists(storage.layoutPath(curName)) then
+      target = wanted
+    end
+    remote.active = target or curName
+    if target and not app.dirty and (not app.judge or app.judge.state == 'idle') then
+      app.loadLayout(target)
+    end
+    local changedNames = {}
+    for _, n in ipairs(names) do if changed[n] then changedNames[#changedNames + 1] = n end end
+    if #moved > 0 then
+      status('Itt módosított pályaterv, ami a szerveren is változott – a tiéd megmaradt: ' .. table.concat(moved, ', '), U.col.orange, 15)
+    elseif #changedNames > 0 then
+      status('Pályatervek a szerverről: ' .. table.concat(changedNames, ', ') .. (target and (' – használatban: ' .. target) or ''), U.col.green, 8)
+    elseif force then
+      status('A pályatervek naprakészek (' .. table.concat(names, ', ') .. ').', U.col.green, 6)
+    end
+  end
+  local function done()
+    pending = pending - 1
+    if pending == 0 then apply() end
+  end
+
+  -- GitHub: the list, then each layout (one after the other)
   storage.fetchJSON(storage.remoteIndexURL(), function(err, idx)
     local names = {}
     if not err and type(idx) == 'table' then
       for _, n in ipairs(idx) do if type(n) == 'string' and n ~= '' then names[#names + 1] = n end end
+      githubIndex = names
     end
-    if wanted == '' then wanted = names[1] or 'Alap' end
-    app.remote.wanted = wanted
-    fetchOne(wanted, true)
-    for _, n in ipairs(names) do if n ~= wanted then fetchOne(n, false) end end
+    -- the one the server asks for is fetched even if the list does not have it
+    local w = platform.online and tostring(platform.server.layout or '') or ''
+    local listed = false
+    for _, n in ipairs(names) do if n == w then listed = true end end
+    if w ~= '' and not listed then names[#names + 1] = w end
+    if #names == 0 then names = { 'Alap' } end
+    local left = #names
+    for _, n in ipairs(names) do
+      storage.fetchText(storage.remoteLayoutURL(n), function(e2, text)
+        if not e2 and text and text ~= '' then
+          local okP, data = pcall(JSON.parse, text)
+          if okP and type(data) == 'table' and type(data.zones) == 'table' then github[n] = text end
+        elseif e2 and not tostring(e2):find('404', 1, true) then
+          remote.errors[#remote.errors + 1] = 'GitHub „' .. n .. '”: ' .. tostring(e2)
+        end
+        left = left - 1
+        if left == 0 then done() end
+      end)
+    end
+  end)
+  -- the Google script: layouts uploaded from the game
+  storage.fetchJSON(upload.layoutsURL(key), function(err, data)
+    if err then
+      remote.errors[#remote.errors + 1] = 'feltöltött tervek: ' .. tostring(err)
+    elseif type(data) == 'table' and type(data.layouts) == 'table' then
+      for _, l in ipairs(data.layouts) do
+        if type(l) == 'table' and type(l.name) == 'string' and type(l.text) == 'string' and l.text ~= '' then
+          local okP, d = pcall(JSON.parse, l.text)
+          if okP and type(d) == 'table' and type(d.zones) == 'table' then sheet[l.name] = l end
+        end
+      end
+    end
+    done()
   end)
 end
-if platform.online then app.loadServerLayouts(false) end
+app.loadServerLayouts = app.syncSharedLayouts -- older name (Beállítások button)
+app.syncSharedLayouts(false) -- at start: shared layouts (GitHub + uploaded ones), installed app and online alike
+
+-- „Feltöltés mindenkinek”: the current layout (saved first) goes to the Google script; every PC gets it
+-- when it starts or with „Frissítés a szerverről”. remove = take it off (the PCs keep their copy).
+function app.publishLayout(remove)
+  if not remove and (app.dirty or not storage.fs.fileExists(storage.layoutPath(app.layout.name))) then app.saveLayout() end
+  local name = app.layout.name
+  local text = storage.readText(storage.layoutPath(name))
+  if not remove and (not text or text == '') then
+    status('Előbb mentsd el a pályatervet.', U.col.red)
+    return
+  end
+  app.publishing = { name = name, state = 'sending', remove = remove }
+  local p = app.publishing
+  status((remove and 'Levétel a szerverről: ' or 'Feltöltés mindenkinek: ') .. name .. ' …', U.col.dim, 30)
+  upload.publishLayout({ track = storage.trackKey(), trackID = ac.getTrackFullID('/'), name = name, text = text, deleted = remove }, function(ok, err)
+    p.state = ok and 'ok' or 'error'
+    p.error = err
+    if ok then
+      if not remove then
+        syncRecord()[name] = storage.textHash(text)
+        app.serverLayouts[name] = true
+        storage.saveSettings(app.settings)
+        status('Feltöltve mindenkinek: „' .. name .. '”. A többiek a következő belépéskor kapják meg (vagy a Pálya fülön: „Frissítés a szerverről”).', U.col.green, 15)
+      else
+        status('Levéve a szerverről: „' .. name .. '” (a gépeken lévő példányok megmaradnak).', U.col.green, 12)
+      end
+    else
+      status('Nem sikerült ' .. (remove and 'levenni' or 'feltölteni') .. ': ' .. tostring(err), U.col.red, 15)
+    end
+  end)
+end
 
 -- Main loop ----------------------------------------------------------------------------------------
 
@@ -535,6 +682,7 @@ local function updateFrame(dt)
   hotkeys()
   platform.updateAdmin()
   upload.update()
+  storage.webTick()
   if statusUntil > 0 and now() > statusUntil then app.statusMessage, statusUntil = nil, 0 end
   if sim.isReplayActive or sim.isPaused or sim.dt <= 0 then return end
   local car = app.car()
@@ -1058,7 +1206,7 @@ local function launcher()
   local sw = screenSize()
   local fresh = onlineUI.joinedAt ~= nil and os.clock() - onlineUI.joinedAt < 45
   local old = platform.oldInstalledApp()
-  local noLayout = app.remote and app.remote.state == 'error'
+  local noLayout = app.remote and (app.remote.state == 'error' or app.remote.state == 'none') and #app.layout.zones == 0
   local lines = {}
   if fresh then
     lines[#lines + 1] = { string.format('CHT Drift Judge %s – kattints ide, vagy %s', APP_VERSION, app.hotkeyText('main')), U.col.text, true }
@@ -1121,7 +1269,7 @@ if platform.online then
           resizable = true, closable = true, hotkey = app.hotkeyText('main') }, function()
           local old = platform.oldInstalledApp()
           if old then U.wrapped(oldAppText(old), 13, U.col.orange, true) end
-          if app.remote and app.remote.state == 'error' then
+          if app.remote and (app.remote.state == 'error' or app.remote.state == 'none') and #app.layout.zones == 0 then
             U.wrapped(string.format('Ehhez a pályához (%s) nincs pályaterv a szerveren (%s), ezért nincsenek zónák, és a program nem pontoz. '
               .. 'A Pálya fülön lehet készíteni egyet (ezen a gépen megmarad), vagy küldjétek el a meglévőt (Pálya fül → Másolás), és felkerül a szerverre.',
               ac.getTrackFullID('/'), tostring(app.remote.error)), 12, U.col.orange)

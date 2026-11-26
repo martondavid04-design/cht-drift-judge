@@ -28,6 +28,7 @@ local traceStep = 2.0
 local traceLast = nil
 local gateWidth = 16
 local newLayoutName = ''
+local confirmShare = nil -- { what = 'up' | 'down', at = os.clock() }: second click within 6 s confirms
 local confirmDelete = nil
 local lastCarPoint = nil
 local zoneQuery = ''
@@ -659,7 +660,7 @@ local function layoutFiles()
     if U.button('Mappa', 0, false, 'A pályatervek mappájának megnyitása (innen küldhető el a fájl).') then storage.openFolder(storage.layoutsDir()) end
   end
   ui.sameLine()
-  if U.button('Másolás', 0, false, 'A pályaterv (JSON) a vágólapra kerül: így küldhető el, és így kerülhet fel a szerverre (GitHub layouts mappa), hogy mindenki megkapja.') then
+  if U.button('Másolás', 0, false, 'A pályaterv (JSON) a vágólapra kerül: így is elküldhető (pl. Discordon).') then
     local ok, text = pcall(JSON.stringify, app.layout)
     if ok and type(ac.setClipboardText) == 'function' and pcall(ac.setClipboardText, text) then
       app.status('A pályaterv a vágólapon (' .. tostring(#text) .. ' karakter). Küldd el, vagy töltsd fel a GitHubra: layouts/' .. storage.trackKey() .. '/' .. app.layout.name .. '.json', U.col.green, 10)
@@ -667,10 +668,39 @@ local function layoutFiles()
       app.status('Nem sikerült a vágólapra másolni.', U.col.red)
     end
   end
-  if storage.online then
-    U.text('Online változat: a pályaterv a szerverről (GitHub) jön' .. (app.serverLayouts[app.layout.name] and ' – ez a szerver változata.' or '.') ..
-      ' A mentés csak ezen a gépen marad meg; a véglegeset a „Másolás” gombbal küldd el.', 12, U.col.dim)
+
+  -- Sharing: one click and everyone gets it (installed app and online alike)
+  local name = app.layout.name
+  local p = app.publishing
+  local sending = p and p.state == 'sending'
+  if confirmShare and os.clock() - confirmShare.at > 6 then confirmShare = nil end
+  local shareLabel = (confirmShare and confirmShare.what == 'up') and 'Biztos? Kattints újra##share' or 'Feltöltés mindenkinek##share'
+  if U.button(shareLabel, 0, sending or #app.layout.zones == 0,
+    'Elmenti, és feltölti a szerverre ezt a pályatervet („' .. name .. '”) – mindenki megkapja, aki elindítja a programot vagy a „Frissítés a szerverről” gombot nyomja (a szerverről kapott és a telepített változat is). Ha van ilyen nevű közös terv, ez lép a helyére; a régi változatok megmaradnak a feltöltések között.') then
+    if confirmShare and confirmShare.what == 'up' then confirmShare = nil; app.publishLayout(false)
+    else confirmShare = { what = 'up', at = os.clock() } end
   end
+  ui.sameLine()
+  local loading = app.remote and app.remote.state == 'loading'
+  if U.button('Frissítés a szerverről##sync', 0, loading, 'Letölti a közös pályaterveket ehhez a pályához (GitHub és a feltöltöttek). Amit itt módosítottál, nem vész el: ha közben a közös is változott, a tiéd „(helyi)” néven megmarad.') then
+    app.syncSharedLayouts(true)
+  end
+  if app.serverLayouts[name] then
+    ui.sameLine()
+    local downLabel = (confirmShare and confirmShare.what == 'down') and 'Biztos? Kattints újra##unshare' or 'Levétel a szerverről##unshare'
+    if U.button(downLabel, 0, sending, 'A feltöltött „' .. name .. '” tervet leveszi a szerverről (az új belépők nem kapják meg; a gépeken lévő példányok megmaradnak). A GitHubon lévő tervet csak a fejlesztő veheti le.') then
+      if confirmShare and confirmShare.what == 'down' then confirmShare = nil; app.publishLayout(true)
+      else confirmShare = { what = 'down', at = os.clock() } end
+    end
+  end
+  local r = app.remote or {}
+  local line
+  if sending then line = 'Feltöltés folyamatban…'
+  elseif loading then line = 'Közös pályatervek letöltése…'
+  elseif app.serverLayouts[name] then line = 'Ez közös pályaterv (' .. tostring((r.from or {})[name] or 'szerver') .. ').'
+  elseif r.state == 'error' then line = 'A közös pályaterveket nem sikerült letölteni: ' .. tostring(r.error)
+  else line = 'Ez a pályaterv csak ezen a gépen van – a „Feltöltés mindenkinek” gombbal kapja meg mindenki.' end
+  U.text(line, 12, U.col.dim)
 
   ui.setNextItemWidth(220)
   newLayoutName = U.searchBox('newname', 'Új név…', newLayoutName, 220)

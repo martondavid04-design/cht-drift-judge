@@ -377,18 +377,77 @@ function storage.importInstalledLayouts()
   return res or {}, why
 end
 
--- callback(err, parsedJSON). Only for small JSON files; errors are strings.
-function storage.fetchJSON(url, callback)
-  if type(web) ~= 'table' or type(web.get) ~= 'function' then callback('nincs web.get') return end
-  local ok, e = pcall(web.get, url, function(err, response)
+-- Downloads go one at a time (CSP allows two requests at once; the test-data upload uses the other one).
+-- A request without an answer for 30 s counts as failed, so one stuck request never blocks the rest.
+local webQueue, webCurrent = {}, nil
+local function webNext()
+  if webCurrent then return end
+  local job = table.remove(webQueue, 1)
+  if not job then return end
+  local done = false
+  local function finish(err, response)
+    if done then return end
+    done = true
+    if webCurrent == job then webCurrent = nil end
+    pcall(job.cb, err, response)
+    webNext()
+  end
+  job.finish, job.started = finish, os.clock()
+  webCurrent = job
+  local ok, e = pcall(web.get, job.url, finish)
+  if not ok then finish(tostring(e)) end
+end
+
+local function webGet(url, cb)
+  if type(web) ~= 'table' or type(web.get) ~= 'function' then cb('nincs web.get') return end
+  webQueue[#webQueue + 1] = { url = url, cb = cb }
+  webNext()
+end
+
+-- Called every frame: gives up on a request that got no answer in 30 s.
+function storage.webTick()
+  if webCurrent and os.clock() - (webCurrent.started or 0) > 30 then webCurrent.finish('nincs válasz 30 mp alatt') end
+end
+
+-- callback(err, text). Follows redirects itself too (the Google script answers with one).
+function storage.fetchText(url, callback, hops)
+  hops = hops or 0
+  webGet(url, function(err, response)
     if err then callback(tostring(err)) return end
     local status = response and response.status or 0
+    if (status == 301 or status == 302 or status == 303 or status == 307 or status == 308) and hops < 3 then
+      local loc = nil
+      pcall(function() for k, v in pairs(response.headers or {}) do if tostring(k):lower() == 'location' then loc = tostring(v) end end end)
+      if loc and loc ~= '' then storage.fetchText(loc, callback, hops + 1) return end
+    end
     if status ~= 200 then callback('HTTP ' .. tostring(status)) return end
-    local okP, data = pcall(JSON.parse, response.body or '')
-    if not okP or data == nil then callback('hibás JSON') return end
-    callback(nil, data)
+    callback(nil, tostring(response.body or ''))
   end)
-  if not ok then callback(tostring(e)) end
+end
+
+-- callback(err, parsedJSON, text). Only for small JSON files; errors are strings.
+function storage.fetchJSON(url, callback)
+  storage.fetchText(url, function(err, text)
+    if err then callback(err) return end
+    local okP, data = pcall(JSON.parse, text)
+    if not okP or data == nil then callback('hibás JSON') return end
+    callback(nil, data, text)
+  end)
+end
+
+-- A file's text as it is (layout sync compares texts, so it must not be re-encoded).
+function storage.readText(path) return fs.load(path) end
+function storage.writeText(path, text)
+  fs.createFileDir(path)
+  return fs.save(path, text, true)
+end
+
+-- Short, stable fingerprint of a text (djb2, within the exact range of Lua numbers) + its length.
+function storage.textHash(text)
+  text = tostring(text or '')
+  local h = 5381
+  for i = 1, #text do h = (h * 33 + text:byte(i)) % 2147483647 end
+  return string.format('%x-%d', h, #text)
 end
 
 return storage

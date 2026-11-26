@@ -55,6 +55,22 @@ saját tárolójában maradnak meg. A változtatás a szerver újraindítása ut
 kell. Ha egy gépen fut, a szerverről kapott változat ott csendben marad. Részletes leírás és
 tesztterv: `OLVASS_EL.txt`.
 
+## Közös pályatervek (0.3.12)
+
+A program induláskor (és a Pálya fülön a „Frissítés a szerverről” gombra) letölti az adott pálya közös
+pályaterveit – a telepített app és a szerverről kapott változat is:
+
+1. a GitHub `layouts/<pálya kulcsa>/` mappájából (lásd lent),
+2. a játékból feltöltöttek közül: Pálya fül → **„Feltöltés mindenkinek”**. Ezek a tesztadatokat gyűjtő
+   Google-scripthez kerülnek (`tools/gsheet_collector.gs`, Pályatervek lap, minden változat megmarad), és
+   onnan kérhetők le kulcs nélkül: `<script címe>?action=layouts&track=<pálya kulcsa>`. Ugyanazon a
+   néven a feltöltött nyer. GitHub-írókulcs azért nincs a programban, mert a program nyilvános: a kulccsal
+   bárki átírhatná a repót.
+
+Ami egy gépen módosult, nem vész el: marad, amíg a közös nem változik; ha mindkettő változott, a helyi
+`<név> (helyi)` néven megmarad (`settings.layoutSync` tartja nyilván, melyik közös változat van a gépen).
+Pályát offline, a telepített appal lehet készíteni (egyjátékos mód), és onnan feltölteni.
+
 ## Pályatervek
 
 `layouts/<pálya kulcsa>/<név>.json` (és opcionálisan `layouts/<pálya kulcsa>/index.json`: a nevek

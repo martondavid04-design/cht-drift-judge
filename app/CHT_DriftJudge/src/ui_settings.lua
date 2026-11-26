@@ -381,9 +381,9 @@ function S.serverInfo(app)
       role and U.col.green or nil)
     row('Pontok a pilótáknak', platform.flag('pilotScores') and 'látszanak (pilotScores = 1)' or 'csak a bírók látják (pilotScores = 0)')
     local r = app.remote or {}
-    local lay = r.state == 'ok' and ('letöltve: ' .. tostring(r.active)) or (r.state == 'loading' and 'letöltés…')
-      or (r.state == 'error' and ('nem sikerült: ' .. tostring(r.error))) or '–'
-    row('Pályaterv a szerverről', lay, r.state == 'error' and U.col.orange or nil)
+    local lay = r.state == 'ok' and (table.concat(r.names or {}, ', ') .. ' – használatban: ' .. tostring(r.active)) or (r.state == 'loading' and 'letöltés…')
+      or (r.state == 'error' and ('nem sikerült: ' .. tostring(r.error))) or (r.state == 'none' and 'ehhez a pályához nincs') or '–'
+    row('Közös pályatervek', lay, r.state == 'error' and U.col.orange or nil)
     local inst = platform.installedAppVersion()
     local old = platform.oldInstalledApp()
     local instText
@@ -413,8 +413,8 @@ function S.serverInfo(app)
     end
     if platform.online then
       ui.offsetCursorY(4)
-      if U.button('Pályaterv újratöltése a szerverről##reloadSrv', 0, false, 'Újra letölti a pályatervet a szerver GitHub-mappájából, és azt használja.') then
-        app.loadServerLayouts(true)
+      if U.button('Pályaterv újratöltése a szerverről##reloadSrv', 0, false, 'Újra letölti a közös pályaterveket (GitHub és a feltöltöttek), és a szerver által kért tervet használja.') then
+        app.syncSharedLayouts(true)
       end
       if ui.checkbox('Indítógomb a képernyő tetején, amíg a fő ablak zárva van##launcherOn', app.settings.ui.onlineLauncher ~= false) then
         if app.settings.ui.onlineLauncher == false then app.settings.ui.onlineLauncher = nil else app.settings.ui.onlineLauncher = false end

@@ -1,9 +1,10 @@
-CHT DRIFT JUDGE – 0.3.11 (1. fázis: solo / kvalifikáció)
+CHT DRIFT JUDGE – 0.3.12 (1. fázis: solo / kvalifikáció)
 CornerHuntersTeam drift bírói rendszer Assetto Corsához
 =====================================================================
 
 TARTALOM
-  0. Új a 0.3.11-ben (a pályatervek frissítéskor megmaradnak), a 0.3.10-ben (a szerverről kapott
+  0. Új a 0.3.12-ben (pályaterv egy gombbal mindenkinek), a 0.3.11-ben (a pályatervek frissítéskor
+     megmaradnak), a 0.3.10-ben (a szerverről kapott
      program belépéskor látszik), a 0.3.9-ben (a tesztadatok automatikusan a fejlesztő Google-táblázatába mennek; a
      szerveradminok bíróként látják a pontokat), a 0.3.8-ban (a program a szerverről is jön – nem kell telepíteni; pályarajz ki-be egy
      gombbal; bírói levonás; a pilóták futásai a bíróknál), a 0.3.7-ben (a válaszok szerinti pontozás: Line 60 / Angle 20 / Stílus 20, 72°, 13°, 95°,
@@ -13,14 +14,34 @@ TARTALOM
   1. Telepítés
   2. Pályaterv készítése
   3. Futás és eredmény
-  4. TESZTELÉSI TERV – pontos lépések (T01–T57)
+  4. TESZTELÉSI TERV – pontos lépések (T01–T60)
   5. Mit küldjetek vissza
   6. Alapbeállítások
   7. Tesztjegyzőkönyv (kitöltendő minta)
 
 
-0. ÚJ A 0.3.11-BEN
+0. ÚJ A 0.3.12-BEN
 ------------------
+  • PÁLYATERV EGY GOMBBAL MINDENKINEK: Pálya fül → „Feltöltés mindenkinek” (a megerősítéshez még
+    egyszer rá kell kattintani). A program elmenti, és feltölti a tervet; mindenki megkapja, aki
+    elindítja a programot (a szerverről kapott és a telepített változat is), vagy a Pálya fülön a
+    „Frissítés a szerverről” gombot nyomja. Ugyanilyen nevű közös terv helyére lép (a régi
+    változatok megmaradnak a feltöltések között, vissza lehet állni). „Levétel a szerverről”: az új
+    belépők már nem kapják meg (a gépeken lévő példányok megmaradnak).
+  • PÁLYÁT BÁRKI KÉSZÍTHET, AKKOR IS, HA NINCS FENT A SZERVEREN: a TELEPÍTETT app offline
+    (egyjátékos, gyakorló módban) is teljesen működik – ott kell elkészíteni és kipróbálni a
+    pályatervet, aztán „Feltöltés mindenkinek”. Ehhez internet kell, szerver nem.
+  • A KÖZÖS PÁLYATERVEK INDULÁSKOR LETÖLTŐDNEK – a telepített appban is (eddig csak a szerverről
+    kapott változat töltötte le). Forrásaik: a GitHub layouts mappája (6 pálya „Alap” terve már fent
+    van: vdc_brno_2022, cds_brno_reverse, vdc_autopolis_2022, trackwood_pro_reverse_2026,
+    indonesia_circuit24 / vdc_layout_a, dcgp13_tosfed_istanbul_park / dcgp13) és a feltöltöttek
+    (ugyanazon a néven a feltöltött az újabb, az nyer).
+  • NEM VÉSZ EL SEMMI: amit a saját gépeden módosítottál, az marad, amíg a közös nem változik. Ha
+    mindkettő változott, a tiéd „<név> (helyi)” néven megmarad, és a program szól érte.
+
+
+ÚJ A 0.3.11-BEN
+---------------
   • A PÁLYATERVEK NEM TŰNNEK EL:
       – A TELEPÍTETT app a pályaterveket, a beállításokat és a futásokat a Dokumentumok\Assetto
         Corsa\CHT Drift Judge mappában tartja, NEM az app mappájában. Frissítéskor csak az
@@ -34,8 +55,8 @@ TARTALOM
         olvasni a Dokumentumok mappát): ha csak ez fut, a gépen lévő pályatervek akkor is
         látszanak. Beállítások → „Online változat és szerver” → „Pályatervek a telepített appból”.
       – Ha a szerveren ugyanilyen nevű pályaterv van, a gépen lévő „<név> (helyi)” néven megmarad.
-  • A legbiztosabb: a kész pályatervet a Pálya fül „Másolás” gombjával küldjétek el – felkerül a
-    szerverre, és onnan mindenki megkapja, minden verzióval.
+  • A legbiztosabb: a kész pályatervet közössé tenni (0.3.12-től: „Feltöltés mindenkinek”) – onnan
+    mindenki megkapja, minden verzióval.
 
 
 ÚJ A 0.3.10-BEN
@@ -52,7 +73,7 @@ TARTALOM
     szerverről kapott mellett külön fut, és a saját (régi) verziószámát mutatja. A program most szól
     érte (üdvözlő üzenet, fő ablak, Beállítások). Teendő: kilépés után az
     assettocorsa\apps\lua\CHT_DriftJudge mappát nevezd át (pl. _CHT_DriftJudge-ra), vagy telepítsd
-    a legújabbat (GitHub: dist\CHT_DriftJudge_v0.3.11.zip). A 0.3.8-tól a telepített app szól a
+    a legújabbat (GitHub: dist\CHT_DriftJudge_v0.3.12.zip). A 0.3.8-tól a telepített app szól a
     szerverről kapottnak, és az ilyenkor csendben marad.
   • HA NINCS PÁLYATERV A SZERVEREN ehhez a pályához, a fő ablak tetején és a gombon is kiírja (zónák
     nélkül a program nem pontoz). A pályatervet a Pálya fül „Másolás” gombjával lehet elküldeni.
@@ -379,7 +400,7 @@ Content Manager ajánlott.
 
 A játékban a jobb oldali app-sávban két ablak jelenik meg:
   • CHT Drift Judge – a fő ablak (Élő, Eredmény, Futások, Pálya, Beállítások fülek).
-    A fejlécében látszik a verzió: v0.3.11 – ha nem ezt látod, a régi verzió fut.
+    A fejlécében látszik a verzió: v0.3.12 – ha nem ezt látod, a régi verzió fut.
   • CHT Drift HUD   – részletes kijelző: szög középről (bal / jobb), sebesség, fokozat,
     fordulatszám, kormányállás, gáz, fék, kézifék, kuplung, hajtás (van / nincs) és
     kerékkipörgés, zóna, hibák, utolsó pont. A HUD ablak fejlécében lévő fogaskerékkel
@@ -521,8 +542,8 @@ fejlécén látszik, kész-e. Ami hiányzik vagy hibás, az a Teendők panelen i
 4. TESZTELÉSI TERV – PONTOS LÉPÉSEK
 -----------------------------------
 ELŐKÉSZÜLETEK (minden tesztelőnél, egyszer):
-  1. Telepítsd a 0.3.11-et, és nézd meg, hogy a fő ablak fejlécében v0.3.11 látszik (a szerveren a
-     szerverről kapott változat fejlécében „v0.3.11 · online”).
+  1. Telepítsd a 0.3.12-t, és nézd meg, hogy a fő ablak fejlécében v0.3.12 látszik (a szerveren a
+     szerverről kapott változat fejlécében „v0.3.12 · online”).
   2. Beállítások fül → ha a fül neve „Beállítások (… mód.)”, nyomd meg a „Mind vissza
      alapra” gombot (és utána az „Igen, mind vissza alapra”-t). Így mindenki ugyanazzal a
      beállítással tesztel, és az eredmények összevethetők. Ha egy teszt kifejezetten
@@ -805,7 +826,7 @@ T50 – A program a szerverről (10 perc, a PrikezsiaGang szerveren)
   bejegyzés, próbáld ki.
   Elvárt: belépéskor az üzenet a gyorsbillentyűkkel, az első belépéskor a fő ablak magától
   megnyílik, a HUD látszik, zárt fő ablaknál a képernyő tetején a „CHT Drift Judge” gomb; a
-  fejlécben „v0.3.11 · online”; az ablakok
+  fejlécben „v0.3.12 · online”; az ablakok
   megnyílnak, mozgathatók; kilépés és újbóli belépés után ugyanott vannak.
   Írd fel: a CSP verziót; mit mutat az „Online változat és szerver” szekció minden sora (főleg a
   Steam ID és az „Üzenetek a szerveren” sor); hiba esetén a custom_shaders_patch.log-ot.
@@ -852,6 +873,24 @@ T57 – Admin = bíró (5 perc, a szerveren, ha a pilotScores = 0)
   másik gépen pilótaként. Beállítások → „Online változat és szerver” → „Szerep a szervertől”.
   Elvárt: az admin gépén „Szerveradmin – bíróként látja a pontokat”, és látja a pontot; a pilóta
   gépén „Pilóta”, és nem látja.
+
+=== A7 BLOKK – A 0.3.12 ÚJDONSÁGAI (kb. 30 perc, 2 gép) ===
+
+T58 – Pályaterv mindenkinek (2 gép)
+  Lépések: az 1. gépen (telepített app, akár offline) Pálya fül → egy új, próba nevű terv (pl.
+  „Proba1”) néhány zónával → „Feltöltés mindenkinek” → még egyszer rá. A 2. gépen (szerverről
+  kapott vagy telepített változat) ugyanazon a pályán Pálya fül → „Frissítés a szerverről”.
+  Elvárt: az 1. gépen „Feltöltve mindenkinek: „Proba1””; a 2. gépen a listában megjelenik a „Proba1”,
+  a szövegsor „Ez közös pályaterv (feltöltve: <név>, <idő>)”. Utána „Levétel a szerverről” az 1. gépen.
+
+T59 – Saját módosítás megmarad (1 gép)
+  Lépések: egy közös terven (pl. Alap) mozgass meg egy zónát → Mentés → „Frissítés a szerverről”.
+  Elvárt: a módosítás megmarad. Ha közben valaki feltöltött egy új „Alap”-ot, a tiéd „Alap (helyi)”
+  néven megmarad, és a program szól érte.
+
+T60 – Telepített app frissítése (1 gép)
+  Lépések: írd felül az assettocorsa\apps\lua\CHT_DriftJudge mappát a 0.3.12 zip tartalmával.
+  Elvárt: minden pályaterv, beállítás és futás megvan (Dokumentumok\Assetto Corsa\CHT Drift Judge).
 
 === B BLOKK – MÁSODIK ALKALOM (kb. 1,5 óra) ===
 
@@ -1014,7 +1053,7 @@ a küszöböket, a pontozási arányt és a zónák távolságait.
 7. TESZTJEGYZŐKÖNYV (minta – másold ki egy jegyzetbe vagy táblázatba)
 ---------------------------------------------------------------------
 Tesztelő neve: ............   Dátum: ............   Pálya: ............   Autó: ............
-Kormány / pedál: ............   App verzió (fejléc): v0.3.11   CSP verzió: ............
+Kormány / pedál: ............   App verzió (fejléc): v0.3.12   CSP verzió: ............
 
 Teszt | Futás ideje (Eredmény fül) | Mit csináltam | Mit várt a bíró | Mit mutatott a program | Megjegyzés
 ------+----------------------------+---------------+-----------------+------------------------+-----------

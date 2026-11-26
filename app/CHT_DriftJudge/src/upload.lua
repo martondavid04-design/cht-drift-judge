@@ -123,8 +123,13 @@ local function makeRoom(size)
   return not full()
 end
 
-local function push(kind, msg, what)
-  if not M.enabled() or not configured() then return false end
+-- opts: { force = send even if test data is switched off (an explicit action, e.g. publishing a layout),
+--         front = goes before the waiting items, cb = function(ok, err) when it is sent or given up }
+local function push(kind, msg, what, opts)
+  opts = opts or {}
+  if not configured() then return false end
+  if not opts.force and not M.enabled() then return false end
+  if type(web) ~= 'table' or type(web.post) ~= 'function' then return false end
   msg.key = M.key
   msg.session = M.sessionId
   msg.version = app.version
@@ -139,7 +144,8 @@ local function push(kind, msg, what)
     M.stats.dropped = M.stats.dropped + 1
     return false
   end
-  queue[#queue + 1] = { kind = kind, body = body, tries = 0, nextAt = 0, what = what or kind }
+  local item = { kind = kind, body = body, tries = 0, nextAt = 0, what = what or kind, force = opts.force, cb = opts.cb }
+  if opts.front then table.insert(queue, 1, item) else queue[#queue + 1] = item end
   queueBytes = queueBytes + #body
   M.stats.queued, M.stats.bytes = #queue, queueBytes
   return true
@@ -270,18 +276,40 @@ function M.debug(level, where, message, details)
   return push('debug', { type = 'debug', level = level or 'error', where = clip(where, 60), message = clip(message, 2000), details = details }, 'debug: ' .. clip(where, 30))
 end
 
+-- Shared layouts („Feltöltés mindenkinek”) ------------------------------------------------------------
+-- The layout goes to the same Google script; from there every PC downloads it when it starts (and with
+-- „Frissítés a szerverről”). info: { track, trackID, name, text, deleted }; cb(ok, err).
+function M.publishLayout(info, cb)
+  if not app then if cb then cb(false, 'nincs elindítva') end return false end
+  if not configured() then if cb then cb(false, 'nincs beállítva a táblázat címe') end return false end
+  if type(web) ~= 'table' or type(web.post) ~= 'function' then if cb then cb(false, 'ez a CSP nem tud adatot küldeni') end return false end
+  local ok = push('layout', {
+    type = 'layout', track = info.track, trackID = info.trackID, name = info.name,
+    layoutText = (not info.deleted) and info.text or nil, deleted = info.deleted == true or nil,
+  }, (info.deleted and 'levétel: ' or 'pályaterv: ') .. tostring(info.name), { force = true, front = true, cb = cb })
+  if not ok and cb then cb(false, 'nem fért a küldési sorba') end
+  return ok
+end
+
+-- Where the shared layouts of a track can be downloaded (no key needed).
+function M.layoutsURL(trackKey)
+  return M.target() .. '?action=layouts&track=' .. tostring(trackKey):gsub('[^%w%-_%.~]', function(c) return string.format('%%%02X', c:byte()) end)
+end
+
 -- Sending --------------------------------------------------------------------------------------------
 local function finish(item, ok, err)
   if ok then
     removeItem(item)
     M.stats.sent = M.stats.sent + 1
     M.stats.lastOkText, M.stats.lastOkAt = item.what, clock()
+    if item.cb then pcall(item.cb, true) end
     return
   end
   M.stats.lastError = err
   if item.tries >= maxTries or item.permanent then
     removeItem(item)
     M.stats.failed = M.stats.failed + 1
+    if item.cb then pcall(item.cb, false, err) end
   else
     item.nextAt = clock() + (backoff[item.tries] or 60)
   end
@@ -306,7 +334,7 @@ local function onAnswer(myToken, item, err, response)
   finish(item, true)
 end
 
-local function sendNext()
+local function sendNext(on)
   local t = clock()
   if inFlight then
     if t - inFlight.since > M.timeout then
@@ -318,7 +346,7 @@ local function sendNext()
   end
   local item = nil
   for _, it in ipairs(queue) do
-    if t >= it.nextAt then item = it break end
+    if t >= it.nextAt and (on or it.force) then item = it break end
   end
   if not item then return end
   item.tries = item.tries + 1
@@ -339,7 +367,7 @@ function M.update()
   if not app then return end
   if not startedAt then startedAt = clock() end
   if not sessionSent and clock() - startedAt > M.sessionDelay and M.enabled() then sendSession() end
-  if #queue > 0 and M.enabled() then sendNext() end
+  if #queue > 0 then sendNext(M.enabled()) end
 end
 
 function M.init(a)

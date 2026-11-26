@@ -180,11 +180,11 @@ def online_mode():
     vis2 = req(L2, "src/visibility")
     check(vis2.masterOn(app2.settings) is False, 'következő belépéskor megmaradt: pályarajz KI')
     check(app2.layout.name == 'Teszt' and len(lua_list(app2.layout.zones)) == 2, 'következő belépéskor megmaradt: a letöltött pályaterv (szerver nélkül is)')
-    check(app2.remote.state == 'error', 'ha a szerverről nem jön pályaterv, jelzi (Beállítások → Online változat)')
-    # online save of a server layout keeps the server copy
+    check(app2.remote.state in ('error', 'none'), 'ha a szerverről nem jön pályaterv, jelzi (Beállítások → Online változat)')
+    # 0.3.12: an online save of a shared layout keeps its name; the sync protects it (tests/smoke_0312.py)
     app.dirty = True
     app.saveLayout()
-    check(app.layout.name == 'Teszt (helyi)', 'online mentés: a szerver pályaterve megmarad, a módosítás „(helyi)” néven')
+    check(app.layout.name == 'Teszt' and app.dirty is False, 'online mentés: a közös pályaterv a saját nevén mentődik (a szinkron védi, lásd smoke_0312)')
     check(stub.glMaxVerts <= 36, f'online: rajzköteg legfeljebb 36 csúcs ({stub.glMaxVerts})')
 
 

@@ -145,7 +145,7 @@ def no_layout():
     L, g, stub, app = online_base(with_layout=False)
     stub.frameStep(1 / 60)
     draw(g, 2)
-    check(app.remote.state == 'error', 'nincs pályaterv a szerveren → hibaállapot')
+    check(app.remote.state in ('error', 'none'), 'nincs pályaterv a szerveren → jelzi')
     check(not errors(g), 'a figyelmeztetés a fő ablakban és az indítógombon hiba nélkül')
 
 

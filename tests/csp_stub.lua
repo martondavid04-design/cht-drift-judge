@@ -365,6 +365,8 @@ function web.get(url, headers, cb)
   if type(headers) == 'function' then cb = headers end
   STUB.webRequests[#STUB.webRequests + 1] = url
   local body = STUB.webResponses[url]
+  local redirect = STUB.webRedirects and STUB.webRedirects[url]
+  if cb and redirect then cb(nil, { status = 302, body = '<HTML>Moved Temporarily</HTML>', headers = { Location = redirect } }) return end
   if cb then
     if body then cb(nil, { status = 200, body = body, headers = {} })
     else cb(nil, { status = 404, body = '404: Not Found', headers = {} }) end

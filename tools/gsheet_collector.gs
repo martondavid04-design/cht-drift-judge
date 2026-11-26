@@ -5,6 +5,8 @@
  *   type = 'session'  belépés: verzió, CSP, mód, szerep, mit tud a CSP (Belépések lap)
  *   type = 'run'      befejezett futás: összegzés (Futások lap) + teljes telemetria (Telemetria lap, tömörítve)
  *   type = 'debug'    hibák és a festésfelismerés adatai (Debug lap)
+ *   type = 'layout'   „Feltöltés mindenkinek”: egy pályaterv mindenkinek (Pályatervek lap, minden változat megmarad)
+ * Pályatervek lekérése (kulcs nélkül, ezt kéri le a program induláskor): ?action=layouts&track=<pálya kulcsa>
  * Olvasás (doGet, külön olvasó kulccsal): ?key=…&action=ping | runs | debug | sessions | telemetry&run=<futás ID>
  *
  * Két kulcs van: a KEY-t (írás) a program is tartalmazza, ezért nyilvános – vele csak sort lehet hozzáadni.
@@ -27,7 +29,10 @@ const SHEETS = {
   'Belépések': ['Érkezett', 'Pilóta', 'Autó', 'Pálya', 'Pályaterv', 'Verzió', 'Mód', 'CSP', 'Szerep', 'Admin',
     'Képességek (JSON)', 'Munkamenet'],
   'Telemetria': ['Futás ID', 'Érkezett', 'Pilóta', 'Bájt (tömörítve)', 'Részek', 'Adat (gzip, base64) →'],
+  'Pályatervek': ['Feltöltve', 'Pálya', 'Név', 'Szerző', 'Verzió', 'Mód', 'Zónák', 'Bájt (tömörítve)', 'Részek', 'Pálya (AC)',
+    'Adat (gzip, base64) →'],
 };
+const LAYOUT_MAX = 3 * 1024 * 1024;  // egy pályaterv legfeljebb ennyi karakter
 
 function sheet_(name) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -62,6 +67,7 @@ function doPost(e) {
       if (m.type === 'session') return out_(session_(m));
       if (m.type === 'run') return out_(run_(m));
       if (m.type === 'debug') return out_(debug_(m));
+      if (m.type === 'layout') return out_(layout_(m));
       return out_({ ok: false, error: 'type' });
     } finally {
       lock.releaseLock();
@@ -105,6 +111,63 @@ function debug_(m) {
   return { ok: true };
 }
 
+// Pályatervek („Feltöltés mindenkinek”) --------------------------------------------------------------
+function trackKey_(v) { v = String(v || ''); return /^[A-Za-z0-9_.\-]{1,160}$/.test(v) ? v : ''; }
+function layoutName_(v) {
+  v = String(v || '').replace(/[\u0000-\u001f\\/:*?"<>|]/g, '_').trim();
+  return v.length > 0 && v.length <= 80 ? v : '';
+}
+
+function layout_(m) {
+  const c = common_(m);
+  const track = trackKey_(m.track);
+  const name = layoutName_(m.name);
+  if (!track || !name) return { ok: false, error: 'name' };
+  const sh = sheet_('Pályatervek');
+  if (m.deleted) {
+    sh.appendRow([now_(), txt_(track), txt_(name), c.driver, c.version, c.mode, txt_('törölve'), 0, 0, txt_(m.trackID, 160)]);
+    return { ok: true, deleted: true };
+  }
+  const text = String(m.layoutText || '');
+  if (!text || text.length > LAYOUT_MAX) return { ok: false, error: 'size' };
+  let data;
+  try { data = JSON.parse(text); } catch (err) { return { ok: false, error: 'json' }; }
+  if (!data || data.format !== 'cht-drift-layout' || !Array.isArray(data.zones)) return { ok: false, error: 'format' };
+  const gz = Utilities.base64Encode(Utilities.gzip(Utilities.newBlob(text, 'application/json')).getBytes());
+  const parts = [];
+  for (let i = 0; i < gz.length; i += CHUNK) parts.push("'" + gz.slice(i, i + CHUNK));
+  sh.appendRow([now_(), txt_(track), txt_(name), c.driver, c.version, c.mode, data.zones.length, gz.length, parts.length,
+    txt_(m.trackID, 160)].concat(parts));
+  return { ok: true, name: name };
+}
+
+// A pálya legújabb pályatervei névenként (a törölt nevek nélkül), a feltöltött szöveggel együtt.
+function layouts_(track) {
+  track = trackKey_(track);
+  if (!track) return [];
+  const sh = sheet_('Pályatervek');
+  const last = sh.getLastRow();
+  if (last < 2) return [];
+  const meta = sh.getRange(2, 1, last - 1, 9).getValues();
+  const latest = {};
+  for (let i = 0; i < meta.length; i++) {
+    if (String(meta[i][1]) === track) latest[String(meta[i][2])] = i;
+  }
+  const out = [];
+  Object.keys(latest).sort().forEach(function (name) {
+    const i = latest[name];
+    const r = meta[i];
+    if (String(r[6]) === 'törölve') return;
+    const parts = Number(r[8]);
+    if (!parts) return;
+    const gz = sh.getRange(i + 2, 11, 1, parts).getValues()[0].join('');
+    const text = Utilities.ungzip(Utilities.newBlob(Utilities.base64Decode(gz), 'application/x-gzip')).getDataAsString('UTF-8');
+    const t = r[0] instanceof Date ? Utilities.formatDate(r[0], TZ, 'yyyy-MM-dd HH:mm:ss') : String(r[0]);
+    out.push({ name: name, author: String(r[3]), time: t, version: String(r[4]), text: text });
+  });
+  return out;
+}
+
 // Olvasás --------------------------------------------------------------------------------------------
 function rows_(name, limit) {
   const sh = sheet_(name);
@@ -135,6 +198,11 @@ function telemetry_(runId) {
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
+  // a pályatervek nyilvánosak: ezt kéri le minden gép induláskor (kulcs nélkül)
+  if (p.action === 'layouts') {
+    try { return out_({ ok: true, track: trackKey_(p.track), layouts: layouts_(p.track) }); }
+    catch (err) { return out_({ ok: false, error: String(err) }); }
+  }
   if (!READ_KEY || READ_KEY === 'IDE_JON_AZ_OLVASO_KULCS' || p.key !== READ_KEY) return out_({ ok: false, error: 'key' });
   const limit = Math.max(1, Math.min(500, Number(p.limit) || 50));
   try {
@@ -150,7 +218,7 @@ function doGet(e) {
 
 // Kézzel futtatható: törli a próbasorokat (Mód = „teszt”) minden lapról.
 function torolTesztsorok() {
-  ['Futások', 'Debug', 'Belépések'].forEach(function (name) {
+  ['Futások', 'Debug', 'Belépések', 'Pályatervek'].forEach(function (name) {
     const sh = sheet_(name);
     const head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
     const col = head.indexOf('Mód');
