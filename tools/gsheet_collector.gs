@@ -547,7 +547,7 @@ function torolTesztsorok() {
       if ((mode >= 0 && String(vals[i][mode]) === 'teszt') || (sess >= 0 && String(vals[i][sess]) === 'proba')) sh.deleteRow(i + 2);
     }
   });
-  const q = "'" + folderId_() + "' in parents and name contains 'proba' and trashed = false";
+  const q = "'" + folderId_() + "' in parents and (name contains 'proba' or name contains 'verseny_vproba') and trashed = false";
   const res = drive_('https://www.googleapis.com/drive/v3/files?fields=files(id,name)&q=' + encodeURIComponent(q), { method: 'get' });
   (JSON.parse(res.getContentText()).files || []).forEach(function (f) {
     drive_('https://www.googleapis.com/drive/v3/files/' + f.id, { method: 'patch', contentType: 'application/json', payload: JSON.stringify({ trashed: true }) });
